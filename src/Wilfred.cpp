@@ -22,7 +22,7 @@ _moveSpeed(5.0f),  _radius(0.5f),
       _alive(true),
       _falling(false),
       _verticalVelocity(0.0f),
-      _animOffset(0.0f), _position({4.0f, 3.8f, 0.0f}), direction(0.0005f) {
+      _animOffset(0.0f), _position({4.0f, 0.0f, 0.0f}), direction(0.0005f) {
     _headingVector = glm::normalize(glm::vec3(sin(0), 0.0f, cos(0)));
   setProgramUniformLocations(
       shaderProgramHandle, mvpMtxUniformLocation, normalMtxUniformLocation,

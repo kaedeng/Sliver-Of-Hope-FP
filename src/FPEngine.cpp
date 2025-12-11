@@ -1003,8 +1003,8 @@ void FPEngine::_updateScene() {
   const float enemyTurnSpeed = 1.5f; // Radians per second
     _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
     glm::vec3 wilfPos = _pWilfred->getPosition();
-    wilfPos = _checkAndResolveCollisions(wilfPos, 0.5f);
-    _pWilfred->setPosition(wilfPos);
+    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+    _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
       enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);

@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <cmath>
 #include <cstdlib>
+#include <algorithm>
 
 // Static member initialization
 GLuint ParticleSystem::_vao = 0;

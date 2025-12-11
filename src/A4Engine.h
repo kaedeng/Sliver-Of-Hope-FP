@@ -12,8 +12,11 @@
 #include "Enemy.h"
 #include "Coin.h"
 #include "ParticleSystem.h"
+#include "Wilfred.h"
 
 #include <vector>
+
+#include "Wilfred.h"
 
 class A4Engine final : public CSCI441::OpenGLEngine {
 public:
@@ -100,6 +103,7 @@ private:
 
   // i have eliminated the other characters, it is only elster left...
   Character *_pCharacter;
+    Wilfred *_pWilfred;
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(A4)
+project(FP)
 set(CMAKE_CXX_STANDARD 17)
 set(SOURCE_FILES main.cpp A4Engine.cpp A4Engine.h ArcballCam.cpp ArcballCam.hpp Character.h Character.cpp Skybox.cpp Skybox.h Enemy.cpp Enemy.h Coin.cpp Coin.h ParticleSystem.cpp ParticleSystem.h Wilfred.cpp Wilfred.h)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
@@ -8,9 +8,9 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" AND MINGW )
   # if working on Windows but not in the lab
   # update the include directory location
-  include_directories("C:/Users/james/Clionstuff/include" "include")
+  include_directories("C:/Users/james/OneDrive/Clionstuff/include" "include")
   # update the lib directory location
-  target_link_directories(${PROJECT_NAME} PUBLIC "C:/Users/james/Clionstuff/lib")
+  target_link_directories(${PROJECT_NAME} PUBLIC "C:/Users/james/OneDrive/Clionstuff/lib")
   target_link_libraries(${PROJECT_NAME} opengl32 glfw3 glad gdi32)
   # OS X Installations
 elseif( APPLE AND ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )

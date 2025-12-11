@@ -46,10 +46,6 @@ public:
                                   GLint materialColorUniformLocation,
                                   GLint modelMtxUniformLocation);
 
-  /// rotation
-  void _rotateBroLeft();
-  void _rotateBroRight();
-
   // moving
   // Gets the hero's position.
   glm::vec3 getPosition() const;
@@ -60,8 +56,13 @@ public:
   void setAngle(GLfloat angle);
   GLfloat getAngle();
 
+    float getRadius() const { return _radius; }
+
   /// animation
   void _animateBro();
+
+    void setHeading(const glm::vec3& heading);
+    void update(float deltaTime, const glm::vec3& heroPosition, float turnSpeed);
 
 private:
   // SHADER HANDLES AND LOCATIONS
@@ -101,6 +102,14 @@ private:
   GLfloat _animOffset;
   GLfloat direction;
   glm::vec3 _position;
+
+  glm::vec3 _headingVector;
+  bool _alive;
+  bool _falling;
+  float _verticalVelocity;
+  float _animPhase;
+  float _moveSpeed;
+  const float _radius;
 
   static constexpr GLfloat s_PI_OVER_2 = glm::half_pi<float>();
 

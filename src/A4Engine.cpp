@@ -1,4 +1,5 @@
 #include "A4Engine.h"
+#include "Wilfred.h"
 
 #include <CSCI441/objects.hpp>
 #include <stb_image.h>
@@ -30,6 +31,7 @@ A4Engine::~A4Engine() {
   delete _arcBallCam;
   delete _firstPersonCam;
   delete _pCharacter;
+    delete _pWilfred;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
   delete _pSkybox;
@@ -72,6 +74,11 @@ void A4Engine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
         _elsterShaderUniformLocations.materialSpecular,
         _elsterShaderUniformLocations.materialShininess
       );
+        _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+              _lightingShaderUniformLocations.mvpMatrix,
+              _lightingShaderUniformLocations.normalMatrix,
+              _lightingShaderUniformLocations.materialColor,
+              _lightingShaderUniformLocations.modelMatrix);
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -444,6 +451,13 @@ void A4Engine::mSetupScene() {
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 * hillHeight)
   _pCharacter->setPosition(glm::vec3(0.0f, 36.0f, 0.0f));
 
+    _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+                          _lightingShaderUniformLocations.mvpMatrix,
+                          _lightingShaderUniformLocations.normalMatrix,
+                          _lightingShaderUniformLocations.materialColor,
+                          _lightingShaderUniformLocations.modelMatrix);
+    _pWilfred->setPosition(glm::vec3(10.0f, 25.0f, 10.0f));
+
   // Set lighting parameters
   _setLightingParameters();
 
@@ -567,6 +581,9 @@ void A4Engine::mCleanupBuffers() {
 
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
+
+    delete _pWilfred;
+_pWilfred = nullptr;
 }
 
 void A4Engine::mCleanupScene() {
@@ -777,6 +794,12 @@ void A4Engine::_renderScene(
   _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.spotLightColor, spotLightColor);
   _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.pointLightColor, pointLightColor);
   _lightingShaderProgram->setProgramUniform(_lightingShaderUniformLocations.cameraPosition, cameraPos);
+
+    /// OLD MAN TIME
+    glm::mat4 wilfredModelMtx(1.0f);
+    _pWilfred->_animateBro(); // get this man an animation
+    _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
+    /// OLD MAN NO MORE
 
   for (const auto& bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
@@ -995,6 +1018,10 @@ void A4Engine::_updateScene() {
 
   // update enemies
   const float enemyTurnSpeed = 1.5f; // Radians per second
+    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+    glm::vec3 wilfPos = _pWilfred->getPosition();
+    wilfPos = _checkAndResolveCollisions(wilfPos, 0.5f);
+    _pWilfred->setPosition(wilfPos);
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
       enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);

@@ -18,7 +18,12 @@ Wilfred::Wilfred(const GLuint shaderProgramHandle,
       _colorHead({0.9f, 0.875f, 0.627f}), _scaleHead({1.0f, 1.0f, 1.0f}),
       _colorBody({0.4f, 0.659f, 0.412f}), _colorCane({0.46f,0.412f,0.208}), _scaleBody({0.9f, 2.0f, 1.0f}),
       _scaleArm({1.0f, 1.0f, 3.0f}), _scaleHand({1.0f, 1.0f, 0.333f}),
+_moveSpeed(5.0f),  _radius(0.5f),
+      _alive(true),
+      _falling(false),
+      _verticalVelocity(0.0f),
       _animOffset(0.0f), _position({4.0f, 3.8f, 0.0f}), direction(0.0005f) {
+    _headingVector = glm::normalize(glm::vec3(sin(0), 0.0f, cos(0)));
   setProgramUniformLocations(
       shaderProgramHandle, mvpMtxUniformLocation, normalMtxUniformLocation,
       materialColorUniformLocation, modelMtxUniformLocation);
@@ -186,9 +191,51 @@ void Wilfred::setAngle(GLfloat angle) { _rotationAngle = angle; }
 
 GLfloat Wilfred::getAngle() { return _rotationAngle; }
 
-void Wilfred::_rotateBroLeft() { _rotationAngle += 0.01f; }
+void Wilfred::setHeading(const glm::vec3& heading) {
+    _headingVector = glm::normalize(heading);
+}
 
-void Wilfred::_rotateBroRight() { _rotationAngle -= 0.01f; }
+void Wilfred::update(float deltaTime, const glm::vec3& heroPosition, float turnSpeed) {
+    if (!_alive || _falling) {
+        // if falling, apply gravity so the goomba can perish...
+        if (_falling) {
+            const float gravity = -20.0f;
+            _verticalVelocity += gravity * deltaTime;
+            _position.y += _verticalVelocity * deltaTime;
+        }
+        return;
+    }
+
+    // move along heading
+    _position += _headingVector * _moveSpeed * deltaTime;
+
+    // calculate vector from enemy to hero
+    glm::vec3 toHero = heroPosition - _position;
+    toHero.y = 0.0f; // Only turn in horizontal plane
+
+    if (glm::length(toHero) > 0.01f) {
+        glm::vec3 desiredHeading = glm::normalize(toHero);
+
+        // angle between current heading and new heading
+        float currentAngle = atan2(_headingVector.x, _headingVector.z);
+        float desiredAngle = atan2(desiredHeading.x, desiredHeading.z);
+
+        // shortest angular difference
+        float angleDiff = desiredAngle - currentAngle;
+
+        // normalize
+        while (angleDiff > M_PI) angleDiff -= 2.0f * M_PI;
+        while (angleDiff < -M_PI) angleDiff += 2.0f * M_PI;
+
+        // one step towards the hero
+        float maxTurn = turnSpeed * deltaTime;
+        float turnAmount = glm::clamp(angleDiff, -maxTurn, maxTurn);
+
+        float newAngle = currentAngle + turnAmount;
+        _rotationAngle = newAngle;
+        _headingVector = glm::normalize(glm::vec3(sin(newAngle), 0.0f, cos(newAngle)));
+    }
+}
 
 void Wilfred::_computeAndSendMatrixUniforms(const glm::mat4 &modelMtx,
                                             const glm::mat4 &viewMtx,

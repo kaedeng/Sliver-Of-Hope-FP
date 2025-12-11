@@ -11,6 +11,9 @@
 #include "Coin.h"
 #include "Enemy.h"
 #include "ParticleSystem.h"
+#include "Wilfred.h"
+
+#include <vector>
 #include "Skybox.h"
 
 #include <vector>
@@ -101,6 +104,7 @@ private:
 
   // i have eliminated the other characters, it is only elster left...
   Character *_pCharacter;
+    Wilfred *_pWilfred;
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;

@@ -1,7 +1,7 @@
 /*
  *  CSCI 441, Computer Graphics, Fall 2025
  *
- *  Project: MP
+ *  Project: FP
  *  File: main.cpp
  *
  *  Description:
@@ -12,7 +12,7 @@
  *
  */
 
-#include "A4Engine.h"
+#include "FPEngine.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -23,7 +23,7 @@
 //
 // Our main function
 int main() {
-  const auto labEngine = new A4Engine();
+  const auto labEngine = new FPEngine();
   labEngine->initialize();
   if (labEngine->getError() ==
       CSCI441::OpenGLEngine::OPENGL_ENGINE_ERROR_NO_ERROR) {

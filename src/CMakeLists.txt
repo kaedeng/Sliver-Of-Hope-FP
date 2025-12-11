@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(A4)
+project(FP)
 set(CMAKE_CXX_STANDARD 17)
-set(SOURCE_FILES main.cpp A4Engine.cpp A4Engine.h ArcballCam.cpp ArcballCam.hpp Character.h Character.cpp Skybox.cpp Skybox.h Enemy.cpp Enemy.h Coin.cpp Coin.h ParticleSystem.cpp ParticleSystem.h Wilfred.cpp Wilfred.h)
+set(SOURCE_FILES main.cpp FPEngine.cpp FPEngine.h ArcballCam.cpp ArcballCam.hpp Character.h Character.cpp Skybox.cpp Skybox.h Enemy.cpp Enemy.h Coin.cpp Coin.h ParticleSystem.cpp ParticleSystem.h Wilfred.cpp Wilfred.h)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 # Windows with MinGW Installations

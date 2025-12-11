@@ -1,17 +1,17 @@
-#ifndef A4_ENGINE_H
-#define A4_ENGINE_H
+#ifndef FP_ENGINE_H
+#define FP_ENGINE_H
 
 #include <CSCI441/Camera.hpp>
+#include <CSCI441/FreeCam.hpp>
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
-#include <CSCI441/FreeCam.hpp>
 
 #include "ArcballCam.hpp"
 #include "Character.h"
-#include "Skybox.h"
-#include "Enemy.h"
 #include "Coin.h"
+#include "Enemy.h"
 #include "ParticleSystem.h"
+<<<<<<< HEAD:src/A4Engine.h
 #include "Wilfred.h"
 
 #include <vector>
@@ -19,9 +19,16 @@
 #include "Wilfred.h"
 
 class A4Engine final : public CSCI441::OpenGLEngine {
+=======
+#include "Skybox.h"
+
+#include <vector>
+
+class FPEngine final : public CSCI441::OpenGLEngine {
+>>>>>>> 899d52973346144b3a0c0fc952535e3279651829:src/FPEngine.h
 public:
-  A4Engine();
-  ~A4Engine() override;
+  FPEngine();
+  ~FPEngine() override;
 
   void run() override;
 
@@ -59,7 +66,8 @@ private:
   /// \param viewMtx the current view matrix for our camera
   /// \param projMtx the current projection matrix for our camera
   //  param cameraPos: the position of the camera for lighting shenanigans
-  void _renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx, const glm::vec3 &cameraPos) const;
+  void _renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
+                    const glm::vec3 &cameraPos) const;
   /// \desc handles moving our camera as determined by keyboard input
   void _updateScene();
 
@@ -77,20 +85,20 @@ private:
   GLint _leftMouseButtonState;
 
   /// \desc total number of textures in our scene
-    static constexpr GLuint NUM_TEXTURES = 4;
-    /// \desc used to index through our texture array to give named access
-    enum TEXTURE_ID {
-        /// \desc ground texture
-        GROUND = 0,
-        // enemy texture
-        ENEMY = 1,
-        // coin texture
-        COIN = 2,
-        // particle texture
-        PARTICLE = 3,
-    };
-    /// \desc texture handles for our textures
-    GLuint _texHandles[NUM_TEXTURES] = {0};
+  static constexpr GLuint NUM_TEXTURES = 4;
+  /// \desc used to index through our texture array to give named access
+  enum TEXTURE_ID {
+    /// \desc ground texture
+    GROUND = 0,
+    // enemy texture
+    ENEMY = 1,
+    // coin texture
+    COIN = 2,
+    // particle texture
+    PARTICLE = 3,
+  };
+  /// \desc texture handles for our textures
+  GLuint _texHandles[NUM_TEXTURES] = {0};
 
   /// \desc the arcball camera in our world
   CSCI441::Camera *_cam;
@@ -113,9 +121,9 @@ private:
   Skybox *_pSkybox;
 
   // game objects
-  std::vector<Enemy*> _enemies;
-  std::vector<Coin*> _coins;
-  ParticleSystem* _particleSystem;
+  std::vector<Enemy *> _enemies;
+  std::vector<Coin *> _coins;
+  ParticleSystem *_particleSystem;
   int _coinsCollected;
 
   /// \desc the size of the world (controls the ground size and locations of
@@ -125,24 +133,25 @@ private:
   GLuint _groundVAO;
   /// \desc the number of points that make up our ground object
   GLsizei _numGroundPoints;
-  
-  /// \desc smart container to store information specific to each tree we wish to draw
+
+  /// \desc smart container to store information specific to each tree we wish
+  /// to draw
   struct TreeData {
-      /// \desc transformations to position and size the tree
-      glm::mat4 leavesModelMatrix;
-      glm::mat4 trunkModelMatrix;
-      /// \desc color to draw the tree
-      glm::vec3 color;
-      glm::vec3 barkColor;
-      float frameOffset;
+    /// \desc transformations to position and size the tree
+    glm::mat4 leavesModelMatrix;
+    glm::mat4 trunkModelMatrix;
+    /// \desc color to draw the tree
+    glm::vec3 color;
+    glm::vec3 barkColor;
+    float frameOffset;
   };
   /// \desc information list of all the trees to draw
   std::vector<TreeData> _trees;
 
   struct BushData {
-      glm::vec3 position;
-      glm::vec3 color; 
-      GLfloat size;
+    glm::vec3 position;
+    glm::vec3 color;
+    GLfloat size;
   };
   std::vector<BushData> _bushes;
 
@@ -152,7 +161,7 @@ private:
   /// \desc loads an image into CPU memory and registers it with the GPU
   /// \note sets the texture parameters and sends the data to the GPU
   /// \param FILENAME external image filename to load
-  static GLuint _loadAndRegisterTexture(const char* FILENAME);
+  static GLuint _loadAndRegisterTexture(const char *FILENAME);
 
   /// \desc creates the ground VAO
   void _createGroundBuffers();
@@ -186,67 +195,67 @@ private:
     GLint vNormal;
 
   } _lightingShaderAttributeLocations;
-  
+
   // Shaders for elster
-    CSCI441::ShaderProgram* _elsterShaderProgram;
-        struct ElsterShaderUniformLocations {
-        GLint mvpMatrix;
-        GLint normalMatrix;
-        GLint modelMatrix;
-        GLint viewMatrix;
-        GLint materialDiffuse;
-        GLint materialSpecular;
-        GLint materialShininess;
-        GLint lightDirection;
-          GLint lightPosition;
-          GLint pointLightColor;
-          GLint spotLightPosition;
-          GLint spotLightDirection;
-          GLint spotLightColor;
-        GLint lightColor;
-        GLint cameraPosition;
-        GLint ambientLight;
-        GLint useSkinning;
-        GLint jointMatrices;
-    } _elsterShaderUniformLocations;
-    
-    struct ElsterShaderAttributeLocations {
-        GLint vPos;
-        GLint vNormal;
-        GLint vJoints;
-        GLint vWeights;
-    } _elsterShaderAttributeLocations;
+  CSCI441::ShaderProgram *_elsterShaderProgram;
+  struct ElsterShaderUniformLocations {
+    GLint mvpMatrix;
+    GLint normalMatrix;
+    GLint modelMatrix;
+    GLint viewMatrix;
+    GLint materialDiffuse;
+    GLint materialSpecular;
+    GLint materialShininess;
+    GLint lightDirection;
+    GLint lightPosition;
+    GLint pointLightColor;
+    GLint spotLightPosition;
+    GLint spotLightDirection;
+    GLint spotLightColor;
+    GLint lightColor;
+    GLint cameraPosition;
+    GLint ambientLight;
+    GLint useSkinning;
+    GLint jointMatrices;
+  } _elsterShaderUniformLocations;
+
+  struct ElsterShaderAttributeLocations {
+    GLint vPos;
+    GLint vNormal;
+    GLint vJoints;
+    GLint vWeights;
+  } _elsterShaderAttributeLocations;
 
   // tess shaders for ground
-  CSCI441::ShaderProgram* _groundTessShaderProgram;
+  CSCI441::ShaderProgram *_groundTessShaderProgram;
   struct GroundTessShaderUniformLocations {
-      GLint mvpMatrix;
-      GLint modelMatrix;
-      GLint normalMatrix;
-      GLint groundTexture;
-      GLint tessLevel;
-      GLint hillHeight;
-      GLint lightDirection;
-      GLint lightColor;
-      GLint lightPosition;
-      GLint pointLightColor;
-      GLint spotLightPosition;
-      GLint spotLightDirection;
-      GLint spotLightColor;
-      GLint cameraPosition;
+    GLint mvpMatrix;
+    GLint modelMatrix;
+    GLint normalMatrix;
+    GLint groundTexture;
+    GLint tessLevel;
+    GLint hillHeight;
+    GLint lightDirection;
+    GLint lightColor;
+    GLint lightPosition;
+    GLint pointLightColor;
+    GLint spotLightPosition;
+    GLint spotLightDirection;
+    GLint spotLightColor;
+    GLint cameraPosition;
   } _groundTessShaderUniformLocations;
 
   struct GroundTessShaderAttributeLocations {
-      GLint vPos;
-      GLint vNormal;
-      GLint vTexCoord;
+    GLint vPos;
+    GLint vNormal;
+    GLint vTexCoord;
   } _groundTessShaderAttributeLocations;
 
   // sprite shader for enemies, coins, and particles
-  CSCI441::ShaderProgram* _spriteShaderProgram;
+  CSCI441::ShaderProgram *_spriteShaderProgram;
   struct SpriteShaderUniformLocations {
-      GLint mvpMatrix;
-      GLint spriteTexture;
+    GLint mvpMatrix;
+    GLint spriteTexture;
   } _spriteShaderUniformLocations;
 
   /// \desc set the lighting parameters to the shader
@@ -270,8 +279,10 @@ private:
   // calculates the height of the Bezier terrain at a given position
   float _getTerrainHeight(float x, float z) const;
 
-  // checks collision between character and vegetation and returns corrected position
-  glm::vec3 _checkAndResolveCollisions(const glm::vec3& position, float characterRadius) const;
+  // checks collision between character and vegetation and returns corrected
+  // position
+  glm::vec3 _checkAndResolveCollisions(const glm::vec3 &position,
+                                       float characterRadius) const;
 
   // gets the height of the tallest object at a given position
   float _getObjectHeightAt(float x, float z) const;

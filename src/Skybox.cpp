@@ -32,8 +32,8 @@ Skybox::Skybox() {
   mShaderProgram->setProgramUniform("skybox", 0);
 
   std::vector<std::string> faces{
-      "../assets/sky/px.png", "../assets/sky/nx.png", "../assets/sky/py.png",
-      "../assets/sky/ny.png", "../assets/sky/pz.png", "../assets/sky/nz.png"};
+      "./assets/sky/px.png", "./assets/sky/nx.png", "./assets/sky/py.png",
+      "./assets/sky/ny.png", "./assets/sky/pz.png", "./assets/sky/nz.png"};
   loadCubemap(faces);
 
   glGenVertexArrays(1, &mVAO);

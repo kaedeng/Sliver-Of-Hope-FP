@@ -323,10 +323,10 @@ void A4Engine::mSetupShaders() {
 
 void A4Engine::mSetupTextures() {
     // TODO #09 - load textures
-    _texHandles[TEXTURE_ID::GROUND] = _loadAndRegisterTexture("../assets/textures/ground.jpg");
-    _texHandles[TEXTURE_ID::ENEMY] = _loadAndRegisterTexture("../assets/textures/goomba.png");
-    _texHandles[TEXTURE_ID::COIN] = _loadAndRegisterTexture("../assets/textures/coin.png");
-    _texHandles[TEXTURE_ID::PARTICLE] = _loadAndRegisterTexture("../assets/textures/sonic_coin.png");
+    _texHandles[TEXTURE_ID::GROUND] = _loadAndRegisterTexture("./assets/textures/ground.jpg");
+    _texHandles[TEXTURE_ID::ENEMY] = _loadAndRegisterTexture("./assets/textures/goomba.png");
+    _texHandles[TEXTURE_ID::COIN] = _loadAndRegisterTexture("./assets/textures/coin.png");
+    _texHandles[TEXTURE_ID::PARTICLE] = _loadAndRegisterTexture("./assets/textures/sonic_coin.png");
 }
 
 void A4Engine::mSetupBuffers() {
@@ -436,7 +436,7 @@ void A4Engine::mSetupScene() {
     _elsterShaderUniformLocations.materialShininess
   );
 
-  if (!_pCharacter->loadFromFile("../assets/models/heroes/Elster/elster.glb")) {
+  if (!_pCharacter->loadFromFile("./assets/models/heroes/Elster/elster.glb")) {
     fprintf(stderr, "Failed to load character model\n");
   }
 

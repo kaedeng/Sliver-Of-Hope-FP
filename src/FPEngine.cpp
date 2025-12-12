@@ -334,6 +334,7 @@ void FPEngine::mSetupTextures() {
       _loadAndRegisterTexture("./assets/textures/coin.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
       _loadAndRegisterTexture("./assets/textures/sonic_coin.png");
+    _texHandles[TEXTURE_ID::PLAYER] = 
 }
 
 void FPEngine::mSetupBuffers() {

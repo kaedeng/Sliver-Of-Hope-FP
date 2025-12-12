@@ -89,6 +89,8 @@ private:
     COIN = 2,
     // particle texture
     PARTICLE = 3,
+    // Hands texture
+    PLAYER = 4,
   };
   /// \desc texture handles for our textures
   GLuint _texHandles[NUM_TEXTURES] = {0};

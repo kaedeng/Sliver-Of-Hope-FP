@@ -1,28 +1,28 @@
-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-xooooooooooxxxxxxoooooooooox
-xxxxxxxxxxooooooxoooooooooox
-xooooxoooooxxxxoxooxxxxxxoox
-xoxoxxxxxxxxxxxoxooxxxxxxoox
-xoxoxxxxoooooxxoxooxxxxxxoox
-xoxoxxoxoxxxoxxooooxxxxxxoox
-xoxoxxoxoxoooxxoooooooooooox
-xoxoxxoxoxxxxxxoooooooooooox
-xoxoooooooooooooxxxoxxxxoxox
-xoxxxxxxxxxxxxxxxxxoxxxxoxox
-xooooooooooxxxxxxxxoxxxxoxox
-xxxxxxxxxxoxxxxxxxxoxxxxoxox
-xooooooooooxxxxxoooooooooxox
-xoxxxxxxxxxxxxxxoxxxxxxxxxox
-xooooooooooooooooxxxxxxxxxox
-xxxxoxxxxxxxxxxxoxxxxxxxxxox
-xxxxoxxxoooxxxxxoxxxxxxoooox
-xxxxoxxxoooxxxxxooooooxoxxxx
-xxoooxxxoooooxxxxxxxxoooxxox
-xxoxxxxxxxxxooooooxxxxxxxxox
-xxooxxxooooooxxxooxxxxxoooox
-xxxoxxooxxxxoxxxooooooooxxxx
-xxoooooxxxooooooooxxxxxxxxxx
-xxxxxxxxxxxxxxxxxoxxxxxxxxxx
-xooooooooooooxoooooooooooxxx
-xooooooooooxoooooooooooooxxx
-xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x
+x o o o o o o o o o o x x x x x x o o o o o o o o o o x
+x x x x x x x x x x o o o o o o x o o o o o o o o o o x
+x o o o o x o o o o o x x x x o x o o x x x x x x o o x
+x o x o x x x x x x x x x x x o x o o x x x x x x o o x
+x o x o x x x x o o o o o x x o x o o x x x x x x o o x
+x o x o x x o x o x x x o x x o o o o x x x x x x o o x
+x o x o x x o x o x o o o x x o o o o o o o o o o o o x
+x o x o x x o x o x x x x x x o o o o o o o o o o o o x
+x o x o o o o o o o o o o o o o x x x o x x x x o x o x
+x o x x x x x x x x x x x x x x x x x o x x x x o x o x
+x o o o o o o o o o o x x x x x x x x o x x x x o x o x
+x x x x x x x x x x o x x x x x x x x o x x x x o x o x
+x o o o o o o o o o o x x x x x o o o o o o o o o x o x
+x o x x x x x x x x x x x x x x o x x x x x x x x x o x
+x o o o o o o o o o o o o o o o o x x x x x x x x x o x
+x x x x o x x x x x x x x x x x o x x x x x x x x x o x
+x x x x o x x x o o o x x x x x o x x x x x x o o o o x
+x x x x o x x x o o o x x x x x o o o o o o x o x x x x
+x x o o o x x x o o o o o x x x x x x x x o o o x x o x
+x x o x x x x x x x x x o o o o o o x x x x x x x x o x
+x x o o x x x o o o o o o x x x o o x x x x x o o o o x
+x x x o x x o o x x x x o x x x o o o o o o o o x x x x
+x x o o o o o x x x o o o o o o o o x x x x x x x x x x
+x x x x x x x x x x x x x x x x x o x x x x x x x x x x
+x o o o o o o o o o o o o x o o o o o o o o o o o x x x
+x o o o o o o o o o o x o o o o o o o o o o o o o x x x
+x x x x x x x x x x x x x x x x x x x x x x x x x x x x

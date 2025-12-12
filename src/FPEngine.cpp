@@ -1,5 +1,7 @@
 #include "FPEngine.h"
 
+#include <iostream>
+#include <sstream>
 #include <CSCI441/objects.hpp>
 #include <stb_image.h>
 
@@ -598,6 +600,44 @@ void FPEngine::_generateEnvironment() {
   const glm::vec2 coinCorners[4] = {
       glm::vec2(-coinOffset, -coinOffset), glm::vec2(coinOffset, -coinOffset),
       glm::vec2(-coinOffset, coinOffset), glm::vec2(coinOffset, coinOffset)};
+    // read in map file for bushes
+    std::string line;
+    std::string square;
+    // open file
+    std::ifstream inputFile("map.txt");
+
+    // Check if the file was opened successfully
+    if (inputFile.is_open()) {
+        int row = 0, col = 0;
+        // Use a while loop with std::getline to read the file line by line
+        float width = (RIGHT_END_POINT - LEFT_END_POINT)/28;
+        float height = (TOP_END_POINT - BOTTOM_END_POINT)/28;
+        while (std::getline(inputFile, line)) {
+            col=0;
+            std::istringstream lineStream(line);
+            while (lineStream >> square) {
+                if (square == "x") {
+                    // put a wall here
+                    BushData bush;
+                    bush.size = width/2;
+                    float bushX = LEFT_END_POINT+(col*width);
+                    float bushZ = BOTTOM_END_POINT+(row*height);
+                    float terrainY = _getTerrainHeight(bushX, bushZ);
+                    // bush sits on the terrain
+                    bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
+                    bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
+                                           0.588 + (getRand() - 2) * 0.15,
+                                           0.455 + (getRand() - 2) * 0.15);
+                    _bushes.push_back(bush);
+                }
+                col++;
+            }
+            row++;
+        }
+        inputFile.close(); // Close the file stream
+    } else {
+        std::cerr << "Unable to open file" << std::endl;
+    }
 
   // psych! everything's on a grid.
   for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) {
@@ -627,20 +667,20 @@ void FPEngine::_generateEnvironment() {
           continue;
         }
 
-        if (getRand() < 0.5f) {
-          BushData bush;
-          bush.size = 2.0f;
-          float bushX = i + getRand() - 2;
-          float bushZ = j + getRand() - 2;
-          float terrainY = _getTerrainHeight(bushX, bushZ);
-          // bush sits on the terrain
-          bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
-          bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
-                                 0.588 + (getRand() - 2) * 0.15,
-                                 0.455 + (getRand() - 2) * 0.15);
-          _bushes.push_back(bush);
-          continue;
-        }
+        // if (getRand() < 0.5f) {
+        //   BushData bush;
+        //   bush.size = 2.0f;
+        //   float bushX = i + getRand() - 2;
+        //   float bushZ = j + getRand() - 2;
+        //   float terrainY = _getTerrainHeight(bushX, bushZ);
+        //   // bush sits on the terrain
+        //   bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
+        //   bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
+        //                          0.588 + (getRand() - 2) * 0.15,
+        //                          0.455 + (getRand() - 2) * 0.15);
+        //   _bushes.push_back(bush);
+        //   continue;
+        // }
 
         // translate to spot
         float treeX = i + getRand() - 2;
@@ -798,13 +838,13 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
   for (const auto& bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size));
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2, bush.size));
 
     _computeAndSendMatrixUniforms(bushModelMtx, viewMtx, projMtx);
     _lightingShaderProgram->setProgramUniform(
         _lightingShaderUniformLocations.materialColor, bush.color);
 
-    CSCI441::drawSolidSphere(1.0f, 16, 16);
+      CSCI441::drawSolidCube(2.0f);
   }
 
   // Draw enemies (only if they also didn't fall tragically to their deaths)

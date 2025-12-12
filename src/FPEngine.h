@@ -61,6 +61,8 @@ private:
   //  param cameraPos: the position of the camera for lighting shenanigans
   void _renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                     const glm::vec3 &cameraPos) const;
+  /// renders the minimap with flat shading
+  void _renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const;
   /// \desc handles moving our camera as determined by keyboard input
   void _updateScene();
 
@@ -98,6 +100,8 @@ private:
   CSCI441::ArcballCam *_arcBallCam;
   CSCI441::FreeCam *_freeCam;
   CSCI441::FreeCam *_firstPersonCam;
+  CSCI441::FreeCam *_minimapCam; // Top-down camera for minimap
+  float _minimapHeight; // Height of the minimap camera
   /// \desc pair of values to store the speed the camera can move/rotate.
   /// \brief x = forward/backward delta, y = rotational delta
   glm::vec2 _cameraSpeed;
@@ -251,6 +255,21 @@ private:
     GLint mvpMatrix;
     GLint spriteTexture;
   } _spriteShaderUniformLocations;
+
+  // flat shader for minimap
+  CSCI441::ShaderProgram *_flatShaderProgram;
+  struct FlatShaderUniformLocations {
+    GLint mvpMatrix;
+    GLint modelMatrix;
+    GLint normalMatrix;
+    GLint materialColor;
+    GLint lightDirection;
+  } _flatShaderUniformLocations;
+
+  struct FlatShaderAttributeLocations {
+    GLint vPos;
+    GLint vNormal;
+  } _flatShaderAttributeLocations;
 
   /// \desc set the lighting parameters to the shader
   void _setLightingParameters();

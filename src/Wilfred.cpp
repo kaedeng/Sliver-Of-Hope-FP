@@ -65,6 +65,29 @@ void Wilfred::drawWilfred(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
   _drawBrosLowerBody(modelMtx, viewMtx, projMtx); // character's lower body
 }
 
+void Wilfred::drawWilfredFlat(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+                               const glm::mat4 &projMtx, GLuint flatShaderHandle,
+                               GLint mvpLoc, GLint modelLoc, GLint normalLoc,
+                               GLint materialColorLoc) {
+  // save current shader
+  GLuint originalShader = _shaderProgramHandle;
+  ShaderProgramUniformLocations originalLocs = _shaderProgramUniformLocations;
+
+  // temporarily set flat shader
+  _shaderProgramHandle = flatShaderHandle;
+  _shaderProgramUniformLocations.mvpMtx = mvpLoc;
+  _shaderProgramUniformLocations.modelMtx = modelLoc;
+  _shaderProgramUniformLocations.normalMtx = normalLoc;
+  _shaderProgramUniformLocations.materialColor = materialColorLoc;
+
+  // draw with flat shader
+  drawWilfred(modelMtx, viewMtx, projMtx);
+
+  // restore original shader
+  _shaderProgramHandle = originalShader;
+  _shaderProgramUniformLocations = originalLocs;
+}
+
 void Wilfred::_drawBrosHead(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                             const glm::mat4 &projMtx) {
   modelMtx = glm::scale(modelMtx, _scaleHead);

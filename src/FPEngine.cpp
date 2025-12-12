@@ -20,7 +20,8 @@ FPEngine::FPEngine()
       _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0) {
+      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0),
+      _minimapCam(nullptr), _minimapHeight(25.0f), _flatShaderProgram(nullptr) {
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -29,6 +30,7 @@ FPEngine::FPEngine()
 FPEngine::~FPEngine() {
   delete _arcBallCam;
   delete _firstPersonCam;
+  delete _minimapCam;
   delete _pCharacter;
     delete _pWilfred;
   delete _pEnemyElster;
@@ -36,6 +38,7 @@ FPEngine::~FPEngine() {
   delete _groundTessShaderProgram;
   delete _pSkybox;
   delete _spriteShaderProgram;
+  delete _flatShaderProgram;
   delete _particleSystem;
 
   for (auto enemy : _enemies) {
@@ -102,6 +105,18 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
       // Switch main viewport to free camera
       _cam = _freeCam;
       fprintf(stdout, "[INFO]: Main viewport switched to Free Camera\n");
+      break;
+
+    case GLFW_KEY_UP:
+      // Increase minimap height
+      _minimapHeight += 5.0f;
+      fprintf(stdout, "[INFO]: Minimap height increased to %.1f\n", _minimapHeight);
+      break;
+
+    case GLFW_KEY_DOWN:
+      // Decrease minimap height
+      _minimapHeight = glm::max(15.0f, _minimapHeight - 5.0f);
+      fprintf(stdout, "[INFO]: Minimap height decreased to %.1f\n", _minimapHeight);
       break;
 
     default:
@@ -321,6 +336,28 @@ void FPEngine::mSetupShaders() {
       _spriteShaderProgram->getUniformLocation("mvpMatrix");
   _spriteShaderUniformLocations.spriteTexture =
       _spriteShaderProgram->getUniformLocation("spriteTexture");
+
+  // load flat shader for minimap
+  _flatShaderProgram = new CSCI441::ShaderProgram("shaders/flat.v.glsl",
+                                                  "shaders/flat.f.glsl");
+
+  // get uniform locations for flat shader
+  _flatShaderUniformLocations.mvpMatrix =
+      _flatShaderProgram->getUniformLocation("mvpMatrix");
+  _flatShaderUniformLocations.modelMatrix =
+      _flatShaderProgram->getUniformLocation("modelMatrix");
+  _flatShaderUniformLocations.normalMatrix =
+      _flatShaderProgram->getUniformLocation("normalMatrix");
+  _flatShaderUniformLocations.materialColor =
+      _flatShaderProgram->getUniformLocation("materialColor");
+  _flatShaderUniformLocations.lightDirection =
+      _flatShaderProgram->getUniformLocation("lightDirection");
+
+  // get attribute locations for flat shader
+  _flatShaderAttributeLocations.vPos =
+      _flatShaderProgram->getAttributeLocation("vPos");
+  _flatShaderAttributeLocations.vNormal =
+      _flatShaderProgram->getAttributeLocation("vNormal");
 }
 
 void FPEngine::mSetupTextures() {
@@ -428,6 +465,13 @@ void FPEngine::mSetupScene() {
   _firstPersonCam->setTheta(0.0f);
   _firstPersonCam->setPhi(glm::half_pi<float>());
   _firstPersonCam->recomputeOrientation();
+
+  // Create and position the minimap camera (top-down view)
+  _minimapCam = new CSCI441::FreeCam();
+  _minimapCam->setPosition(glm::vec3(0.0f, _minimapHeight, 0.0f));
+  _minimapCam->setTheta(0.0f); // Facing north
+  _minimapCam->setPhi(glm::pi<float>() * 0.999f); // almost straight down so it doesn't break
+  _minimapCam->recomputeOrientation();
 
   // Set the initial active camera to arcball
   _cam = _arcBallCam;
@@ -573,6 +617,8 @@ void FPEngine::mCleanupShaders() {
   _groundTessShaderProgram = nullptr;
   delete _spriteShaderProgram;
   _spriteShaderProgram = nullptr;
+  delete _flatShaderProgram;
+  _flatShaderProgram = nullptr;
 }
 
 void FPEngine::mCleanupBuffers() {
@@ -861,6 +907,139 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
 }
 
+void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
+  // Use the flat shader for minimap rendering
+  _flatShaderProgram->useProgram();
+
+  // Set vertex attribute locations for flat shader
+  CSCI441::setVertexAttributeLocations(
+      _flatShaderAttributeLocations.vPos,
+      _flatShaderAttributeLocations.vNormal);
+
+  // Set lighting direction
+  const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
+  _flatShaderProgram->setProgramUniform(
+      _flatShaderUniformLocations.lightDirection, lightDirection);
+
+  // Draw a simple ground plane
+  glm::mat4 mvpMtx;
+  glm::mat3 normalMtx;
+  glm::mat4 groundModelMtx = glm::scale(glm::mat4(1.0f), glm::vec3(WORLD_SIZE * 2.0f, 1.0f, WORLD_SIZE * 2.0f));
+  mvpMtx = projMtx * viewMtx * groundModelMtx;
+  normalMtx = glm::transpose(glm::inverse(glm::mat3(groundModelMtx)));
+
+  _flatShaderProgram->setProgramUniform(
+      _flatShaderUniformLocations.mvpMatrix, mvpMtx);
+  _flatShaderProgram->setProgramUniform(
+      _flatShaderUniformLocations.modelMatrix, groundModelMtx);
+  _flatShaderProgram->setProgramUniform(
+      _flatShaderUniformLocations.normalMatrix, normalMtx);
+  _flatShaderProgram->setProgramUniform(
+      _flatShaderUniformLocations.materialColor, glm::vec3(0.4f, 0.5f, 0.3f)); // Ground color
+
+  // Draw ground as a simple cube (flattened)
+  CSCI441::drawSolidCube(1.0f);
+
+  // Draw bushes with flat shading
+  for (const auto& bush : _bushes) {
+    glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size));
+
+    mvpMtx = projMtx * viewMtx * bushModelMtx;
+    normalMtx = glm::transpose(glm::inverse(glm::mat3(bushModelMtx)));
+
+    _flatShaderProgram->setProgramUniform(
+        _flatShaderUniformLocations.mvpMatrix, mvpMtx);
+    _flatShaderProgram->setProgramUniform(
+        _flatShaderUniformLocations.modelMatrix, bushModelMtx);
+    _flatShaderProgram->setProgramUniform(
+        _flatShaderUniformLocations.normalMatrix, normalMtx);
+    _flatShaderProgram->setProgramUniform(
+        _flatShaderUniformLocations.materialColor, bush.color);
+
+    CSCI441::drawSolidSphere(1.0f, 16, 16);
+  }
+
+  // Draw character with flat shading (if alive)
+  if (!_characterDead) {
+    _pCharacter->drawFlat(glm::mat4(1.0f), viewMtx, projMtx,
+                          _flatShaderProgram->getShaderProgramHandle(),
+                          _flatShaderUniformLocations.mvpMatrix,
+                          _flatShaderUniformLocations.modelMatrix,
+                          _flatShaderUniformLocations.normalMatrix,
+                          _flatShaderUniformLocations.materialColor,
+                          glm::vec3(0.0f, 0.8f, 1.0f)); // Blue for player
+  }
+
+  // Draw Wilfred
+  _pWilfred->drawWilfredFlat(glm::mat4(1.0f), viewMtx, projMtx,
+                             _flatShaderProgram->getShaderProgramHandle(),
+                             _flatShaderUniformLocations.mvpMatrix,
+                             _flatShaderUniformLocations.modelMatrix,
+                             _flatShaderUniformLocations.normalMatrix,
+                             _flatShaderUniformLocations.materialColor);
+
+  // Draw enemy Elster
+  _pEnemyElster->drawFlat(glm::mat4(1.0f), viewMtx, projMtx,
+                          _flatShaderProgram->getShaderProgramHandle(),
+                          _flatShaderUniformLocations.mvpMatrix,
+                          _flatShaderUniformLocations.modelMatrix,
+                          _flatShaderUniformLocations.normalMatrix,
+                          _flatShaderUniformLocations.materialColor,
+                          glm::vec3(1.0f, 0.0f, 0.0f)); // Red for enemy
+
+  // Draw enemies
+  for (auto enemy : _enemies) {
+    if (enemy->isAlive() && !enemy->isFalling()) {
+      glm::vec3 enemyPos = enemy->getPosition();
+      glm::mat4 enemyModelMtx = glm::translate(glm::mat4(1.0f), enemyPos);
+      enemyModelMtx = glm::scale(enemyModelMtx, glm::vec3(1.5f, 1.5f, 1.5f));
+
+      mvpMtx = projMtx * viewMtx * enemyModelMtx;
+      normalMtx = glm::transpose(glm::inverse(glm::mat3(enemyModelMtx)));
+
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.mvpMatrix, mvpMtx);
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.modelMatrix, enemyModelMtx);
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.normalMatrix, normalMtx);
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.5f, 0.0f)); // Orange for enemies
+
+      CSCI441::drawSolidSphere(1.0f, 16, 16);
+    }
+  }
+
+  // Draw coins
+  for (auto coin : _coins) {
+    if (!coin->isCollected()) {
+      glm::vec3 coinPos = coin->getPosition();
+      glm::mat4 coinModelMtx = glm::translate(glm::mat4(1.0f), coinPos);
+      coinModelMtx = glm::scale(coinModelMtx, glm::vec3(1.5f, 1.5f, 1.5f));
+
+      mvpMtx = projMtx * viewMtx * coinModelMtx;
+      normalMtx = glm::transpose(glm::inverse(glm::mat3(coinModelMtx)));
+
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.mvpMatrix, mvpMtx);
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.modelMatrix, coinModelMtx);
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.normalMatrix, normalMtx);
+      _flatShaderProgram->setProgramUniform(
+          _flatShaderUniformLocations.materialColor, glm::vec3(1.0f, 1.0f, 0.0f)); // Yellow for coins
+
+      CSCI441::drawSolidSphere(1.0f, 16, 16);
+    }
+  }
+
+  // Restore vertex attribute locations for the lighting shader
+  CSCI441::setVertexAttributeLocations(
+      _lightingShaderAttributeLocations.vPos,
+      _lightingShaderAttributeLocations.vNormal);
+}
+
 void FPEngine::_updateScene() {
   // Calculate delta time for character animations
   static float lastTime = 0.0f;
@@ -1094,6 +1273,11 @@ void FPEngine::_updateScene() {
                                 glm::vec3(0.0f, 5.0f, 0.0f));
     _arcBallCam->recomputeOrientation();
   }
+
+  // Update minimap camera to follow character
+  glm::vec3 charPos = _pCharacter->getPosition();
+  _minimapCam->setPosition(glm::vec3(charPos.x, _minimapHeight, charPos.z));
+  _minimapCam->recomputeOrientation();
 }
 
 void FPEngine::run() {
@@ -1155,6 +1339,41 @@ void FPEngine::run() {
     _renderScene(_firstPersonCam->getViewMatrix(), pipProjectionMatrix,
                  _firstPersonCam->getPosition());
 
+    // Clear depth buffer for minimap viewport
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // Minimap viewport dimensions at the top right corner
+    GLint minimapWidth = framebufferWidth / 5;
+    GLint minimapHeight = framebufferHeight / 5;
+    GLint minimapX = framebufferWidth - minimapWidth - 10;
+    GLint minimapY = framebufferHeight - minimapHeight - 10;
+
+    // Use orthographic projection for minimap (typical for top-down views)
+    float orthoSize = 30.0f; // View area size 
+    float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
+    glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);
+
+    // render minimap view
+    glViewport(minimapX, minimapY, minimapWidth, minimapHeight);
+
+    // scissor test to only clear this viewport
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
+
+    // clear color
+    glClearColor(0.4f, 0.4f, 0.4f, 1.0f);
+
+    // Create a simple top-down view matrix
+    glm::vec3 charPos = _pCharacter->getPosition();
+    glm::vec3 eye = glm::vec3(charPos.x, _minimapHeight, charPos.z);
+    glm::vec3 center = glm::vec3(charPos.x, 0.0f, charPos.z);
+    glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f); // -Z is up in this view
+    glm::mat4 minimapViewMatrix = glm::lookAt(eye, center, up);
+
+    _renderMinimap(minimapViewMatrix, minimapProjectionMatrix);
+
+    // Disable scissor test
+    glDisable(GL_SCISSOR_TEST);
     _updateScene();
 
     glfwSwapBuffers(

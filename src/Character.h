@@ -36,6 +36,11 @@ public:
     
     // draw the character
     void draw(const glm::mat4& modelMtx, const glm::mat4& viewMtx, const glm::mat4& projMtx);
+
+    // draw the character with flat shader (for minimap)
+    void drawFlat(const glm::mat4& modelMtx, const glm::mat4& viewMtx, const glm::mat4& projMtx,
+                  GLuint flatShaderHandle, GLint mvpLoc, GLint modelLoc, GLint normalLoc,
+                  GLint materialColorLoc, const glm::vec3& color) const;
     
     // animation control functions
     void playAnimation(const std::string& animationName);

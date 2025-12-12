@@ -774,6 +774,36 @@ void Character::draw(const glm::mat4& modelMtx, const glm::mat4& viewMtx, const 
     }
 }
 
+void Character::drawFlat(const glm::mat4& modelMtx, const glm::mat4& viewMtx, const glm::mat4& projMtx,
+                         GLuint flatShaderHandle, GLint mvpLoc, GLint modelLoc, GLint normalLoc,
+                         GLint materialColorLoc, const glm::vec3& color) const {
+    // apply character position
+    glm::mat4 charTransform = glm::translate(glm::mat4(1.0f), _position);
+    charTransform = glm::rotate(charTransform, _heading, glm::vec3(0.0f, 1.0f, 0.0f));
+    charTransform = glm::scale(charTransform, glm::vec3(3.0f, 3.0f, 3.0f));
+    glm::mat4 finalModelMtx = modelMtx * charTransform;
+
+    // compute matrices
+    glm::mat4 mvpMtx = projMtx * viewMtx * finalModelMtx;
+    glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(finalModelMtx)));
+
+    // set uniforms
+    glProgramUniformMatrix4fv(flatShaderHandle, mvpLoc, 1, GL_FALSE, &mvpMtx[0][0]);
+    glProgramUniformMatrix4fv(flatShaderHandle, modelLoc, 1, GL_FALSE, &finalModelMtx[0][0]);
+    glProgramUniformMatrix3fv(flatShaderHandle, normalLoc, 1, GL_FALSE, &normalMtx[0][0]);
+    glProgramUniform3fv(flatShaderHandle, materialColorLoc, 1, &color[0]);
+
+    // draw each primitive
+    for (size_t i = 0; i < _primitives.size(); ++i) {
+        const Primitive& prim = _primitives[i];
+        glBindVertexArray(prim.vao);
+        if (prim.ibo) {
+            glDrawElements(GL_TRIANGLES, prim.indexCount, prim.indexType, nullptr);
+        }
+        glBindVertexArray(0);
+    }
+}
+
 void Character::_computeAndSendMatrixUniforms(
     const glm::mat4& modelMtx,
     const glm::mat4& viewMtx,

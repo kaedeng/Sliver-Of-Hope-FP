@@ -32,6 +32,12 @@ public:
   void drawWilfred(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                    const glm::mat4 &projMtx);
 
+  /// draws Wilfred with flat shader (for minimap)
+  void drawWilfredFlat(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+                       const glm::mat4 &projMtx, GLuint flatShaderHandle,
+                       GLint mvpLoc, GLint modelLoc, GLint normalLoc,
+                       GLint materialColorLoc);
+
   /// \param shaderProgramHandle shader program handle that the plane should be
   /// drawn using
   /// \param mvpMtxUniformLocation uniform location for the full precomputed MVP

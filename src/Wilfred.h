@@ -62,6 +62,11 @@ public:
   void _animateBro();
 
     void setHeading(const glm::vec3& heading);
+  bool isAlive() const { return _alive; }
+  bool isFalling() const { return _falling; }
+  void setAlive(bool alive) { _alive = alive; }
+  void setFalling(bool falling) { _falling = falling; }
+
     void update(float deltaTime, const glm::vec3& heroPosition, float turnSpeed);
 
 private:

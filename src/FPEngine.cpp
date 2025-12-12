@@ -452,7 +452,7 @@ void FPEngine::mSetupScene() {
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
-  _pCharacter->setPosition(glm::vec3(0.0f, 36.0f, 0.0f));
+  _pCharacter->setPosition(glm::vec3(15.0f, 36.0f, 0.0f));
 
     _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
                           _lightingShaderUniformLocations.mvpMatrix,
@@ -970,7 +970,7 @@ void FPEngine::_updateScene() {
     // Use object height as the landing surface
     float surfaceHeight = terrainHeight;
     if (objectHeight > -500.0f && objectHeight > terrainHeight) {
-      surfaceHeight = objectHeight;
+      //surfaceHeight = objectHeight;
     }
 
     // if character should be on the ground

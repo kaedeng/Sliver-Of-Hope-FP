@@ -31,6 +31,7 @@ FPEngine::~FPEngine() {
   delete _firstPersonCam;
   delete _pCharacter;
     delete _pWilfred;
+  delete _pEnemyElster;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
   delete _pSkybox;
@@ -459,6 +460,28 @@ void FPEngine::mSetupScene() {
                           _lightingShaderUniformLocations.modelMatrix);
     _pWilfred->setPosition(glm::vec3(10.0f, 25.0f, 10.0f));
 
+  // enemy Elster
+  _pEnemyElster = new Character(_elsterShaderProgram->getShaderProgramHandle(),
+                                _elsterShaderUniformLocations.mvpMatrix,
+                                _elsterShaderUniformLocations.normalMatrix,
+                                _elsterShaderUniformLocations.modelMatrix,
+                                _elsterShaderUniformLocations.materialDiffuse,
+                                _elsterShaderUniformLocations.materialSpecular,
+                                _elsterShaderUniformLocations.materialShininess);
+
+  if (!_pEnemyElster->loadFromFile("./assets/models/heroes/Elster/elster.glb")) {
+    fprintf(stderr, "Failed to load enemy Elster model\n");
+  }
+
+  // starting pos for enemy elster
+  float elsterStartX = -10.0f;
+  float elsterStartZ = -10.0f;
+  float elsterStartY = _getTerrainHeight(elsterStartX, elsterStartZ) + 1.0f;
+  _pEnemyElster->setPosition(glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
+
+  // enemy elster to use walking animation
+  _pEnemyElster->playAnimation("elsterWalking");
+
   // Set lighting parameters
   _setLightingParameters();
 
@@ -761,6 +784,10 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     _pCharacter->draw(glm::mat4(1.0f), viewMtx, projMtx);
   }
 
+  // draw enemy Elster
+  glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
+  _pEnemyElster->draw(glm::mat4(1.0f), viewMtx, projMtx);
+
   // lighting shader
   _lightingShaderProgram->useProgram();
 
@@ -1005,6 +1032,14 @@ void FPEngine::_updateScene() {
     glm::vec3 wilfPos = _pWilfred->getPosition();
     glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
     _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
+
+  // update enemy elster
+  _pEnemyElster->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 elsterPos = _pEnemyElster->getPosition();
+  float elsterTerrainHeight = _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
+  glm::vec3 newElsterPos = _checkAndResolveCollisions(glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
+  _pEnemyElster->setPosition(glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
+
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
       enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
@@ -1442,6 +1477,37 @@ void FPEngine::_checkPlayerEnemyCollision() {
   glm::vec3 playerPos = _pCharacter->getPosition();
   const float playerRadius = 0.5f;
 
+  // Check collision with Wilfred
+  glm::vec3 wilfredPos = _pWilfred->getPosition();
+  float wilfredDistance = glm::length(
+      glm::vec2(playerPos.x - wilfredPos.x, playerPos.z - wilfredPos.z));
+  float wilfredMinDistance = playerRadius + _pWilfred->getRadius();
+  float wilfredVerticalDistance = abs(playerPos.y - wilfredPos.y);
+  const float maxVerticalDistance = 2.0f;
+
+  if (wilfredDistance < wilfredMinDistance && wilfredVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
+  // Check collision with enemy Elster
+  glm::vec3 elsterPos = _pEnemyElster->getPosition();
+  float elsterDistance = glm::length(
+      glm::vec2(playerPos.x - elsterPos.x, playerPos.z - elsterPos.z));
+  float elsterMinDistance = playerRadius + 0.5f; // Elster's radius
+  float elsterVerticalDistance = abs(playerPos.y - elsterPos.y);
+
+  if (elsterDistance < elsterMinDistance && elsterVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
   for (auto enemy : _enemies) {
     if (!enemy->isAlive() || enemy->isFalling())
       continue;
@@ -1455,8 +1521,6 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
     // player must be at roughly same height as enemy
     float verticalDistance = abs(playerPos.y - enemyPos.y);
-    const float maxVerticalDistance =
-        2.0f; // Player safe if more than 2 units above/below enemy
 
     if (distance < minDistance && verticalDistance < maxVerticalDistance) {
       // player die </3 rip

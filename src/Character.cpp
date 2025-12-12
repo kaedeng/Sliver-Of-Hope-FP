@@ -17,6 +17,8 @@ Character::Character(
 ) : _shaderProgramHandle(shaderProgramHandle),
     _position(0.0f, 0.0f, 0.0f),
     _heading(0.0f),
+    _headingVector(0.0f, 0.0f, 1.0f),
+    _moveSpeed(5.0f),
     _model(nullptr)
 {
     _shaderLocations.mvpMtx = mvpMtxUniformLocation;
@@ -536,6 +538,45 @@ void Character::playAnimation(const std::string& animationName) {
 
 // wrapper for update animation and join transformations
 void Character::update(float deltaTime) {
+    if (_animState.isPlaying && _animState.currentAnimation >= 0) {
+        _updateAnimation(deltaTime);
+    }
+    _updateJointTransforms();
+}
+
+// pathfinding update for enemy AI
+void Character::update(float deltaTime, const glm::vec3& targetPosition, float turnSpeed) {
+    // move along heading
+    _position += _headingVector * _moveSpeed * deltaTime;
+
+    // calculate vector from enemy to target
+    glm::vec3 toTarget = targetPosition - _position;
+    toTarget.y = 0.0f; // Only turn in horizontal plane
+
+    if (glm::length(toTarget) > 0.01f) {
+        glm::vec3 desiredHeading = glm::normalize(toTarget);
+
+        // angle between current heading and new heading
+        float currentAngle = atan2(_headingVector.x, _headingVector.z);
+        float desiredAngle = atan2(desiredHeading.x, desiredHeading.z);
+
+        // shortest angular difference
+        float angleDiff = desiredAngle - currentAngle;
+
+        // normalize
+        while (angleDiff > M_PI) angleDiff -= 2.0f * M_PI;
+        while (angleDiff < -M_PI) angleDiff += 2.0f * M_PI;
+
+        // one step towards the target
+        float maxTurn = turnSpeed * deltaTime;
+        float turnAmount = glm::clamp(angleDiff, -maxTurn, maxTurn);
+
+        float newAngle = currentAngle + turnAmount;
+        _heading = newAngle;
+        _headingVector = glm::normalize(glm::vec3(sin(newAngle), 0.0f, cos(newAngle)));
+    }
+
+    // update animation and joints
     if (_animState.isPlaying && _animState.currentAnimation >= 0) {
         _updateAnimation(deltaTime);
     }

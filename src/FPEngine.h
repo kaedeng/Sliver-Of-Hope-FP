@@ -105,6 +105,7 @@ private:
   // i have eliminated the other characters, it is only elster left...
   Character *_pCharacter;
     Wilfred *_pWilfred;
+  Character *_pEnemyElster;
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;

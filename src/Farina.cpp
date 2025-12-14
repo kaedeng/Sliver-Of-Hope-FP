@@ -1,28 +1,29 @@
-#include "Minion.h"
+#include "Farina.h"
 
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
 
-Minion::Minion(GLuint shaderProgramHandle, GLint mvpMtxUniformLocation,
+Farina::Farina(GLuint shaderProgramHandle, GLint mvpMtxUniformLocation,
                GLint materialColorUniformLocation,
                GLint normalMtxUniformLocation, GLint modelMtxUniformLocation)
     : _shaderProgramHandle(shaderProgramHandle),
       _mvpMtxUniformLocation(mvpMtxUniformLocation),
       _materialColorUniformLocation(materialColorUniformLocation),
       _normalMtxUniformLocation(normalMtxUniformLocation),
-      _modelMtxUniformLocation(modelMtxUniformLocation), _handBobOffset(0.0f) {
+      _modelMtxUniformLocation(modelMtxUniformLocation), _handBobOffset(0.0f),
+      _moveSpeed(5.0f), _radius(0.5f), _alive(true), _falling(false),
+      _verticalVelocity(0.0f), _animPhase(0.0f) {
   _position = glm::vec3(8.0f, 0.0f, 8.0f);
-  _direction = glm::vec3(0.0f, 0.0f, 1.0f);
+  _heading = glm::vec3(0.0f, 0.0f, 1.0f);
   _angle = 0.0f;
 }
 
-Minion::~Minion() {}
+Farina::~Farina() {}
 
-// Renders the minion model by applying transformations and drawing each part
-void Minion::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
+// Renders Farina by applying transformations and drawing each part
+void Farina::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 
-  // Apply minion's base transformations
-  // modelMtx becomes the root of our hierarchy
+  // Apply Farina's base transformations
   modelMtx = glm::translate(modelMtx, _position);
   modelMtx = glm::rotate(modelMtx, _angle, CSCI441::Y_AXIS);
 
@@ -43,37 +44,69 @@ void Minion::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
   _drawHand(rightHandModelMtx, viewMtx, projMtx);
 }
 
-// Updates the minion's state over time, such as animations
-void Minion::update(float time) {
-  // Calculate the vertical offset using a sine wave
+// Updates Farina's state over time, such as animations
+void Farina::update(float time, const glm::vec3 &heroPosition,
+                    float turnSpeed) {
+  // Update hand animation
   _handBobOffset = 1.0f * sin(time * 6.0f);
+
+  // Update y position if falling
+  if (_falling) {
+    const float gravity = -20.0f;
+    _verticalVelocity += gravity * time;
+    _position.y += _verticalVelocity * time;
+  }
+
+  // Move along current heading
+  _position += _heading * _moveSpeed * time;
+
+  // Calculate vector to hero
+  glm::vec3 toHero = heroPosition - _position;
+  toHero.y = 0.0f;
+
+  if (glm::length(toHero) > 0.01f) {
+    glm::vec3 desiredHeading = glm::normalize(toHero);
+
+    // Calculate angles
+    float currentAngle = atan2(_heading.x, _heading.z);
+    float desiredAngle = atan2(desiredHeading.x, desiredHeading.z);
+
+    // Shortest angular difference
+    float angleDiff = desiredAngle - currentAngle;
+    while (angleDiff > M_PI)
+      angleDiff -= 2.0f * M_PI;
+    while (angleDiff < -M_PI)
+      angleDiff += 2.0f * M_PI;
+
+    // Turn towards hero
+    float maxTurn = turnSpeed * time;
+    float turnAmount = glm::clamp(angleDiff, -maxTurn, maxTurn);
+
+    // Update angle and heading
+    _angle = currentAngle + turnAmount;
+    _heading = glm::normalize(glm::vec3(sin(_angle), 0.0f, cos(_angle)));
+  }
 }
 
-// Returns the minion's position
-glm::vec3 Minion::getPosition() const { return _position; }
+// Get & set Farina's position
+glm::vec3 Farina::getPosition() const { return _position; }
+void Farina::setPosition(glm::vec3 position) { _position = position; }
 
-// Returns the minion's head position
-glm::vec3 Minion::getHeadPosition() const {
-  return _position + glm::vec3(0.0f, 4.0f, 0.0f);
-}
-
-// Sets the minion's position
-void Minion::setPosition(glm::vec3 position) { _position = position; }
-
-// Returns the minion's direction
-glm::vec3 Minion::getDirection() const { return _direction; }
-
-// Sets the minion's direction
-void Minion::setDirection(glm::vec3 direction) { _direction = direction; }
+// Get & set Farina's position
+glm::vec3 Farina::getHeading() const { return _heading; }
+void Farina::setHeading(glm::vec3 direction) { _heading = direction; }
 
 // Returns the minion's angle
-GLfloat Minion::getAngle() const { return _angle; }
+GLfloat Farina::getAngle() const { return _angle; }
 
 // Sets the minion's angle
-void Minion::setAngle(GLfloat angle) { _angle = angle; }
+void Farina::setAngle(GLfloat angle) { _angle = angle; }
+
+// Get Farina's radius.
+float Farina::getRadius() const { return 1.0f; }
 
 // Draws the minion's body
-void Minion::_drawBody(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+void Farina::_drawBody(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                        const glm::mat4 &projMtx) const {
 
   _setMatrices(modelMtx, viewMtx, projMtx);
@@ -82,7 +115,7 @@ void Minion::_drawBody(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
 }
 
 // Draws the minion's head and eyes
-void Minion::_drawHead(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+void Farina::_drawHead(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                        const glm::mat4 &projMtx) const {
   // Draw Head
   glm::mat4 headModelMtx =
@@ -129,7 +162,7 @@ void Minion::_drawHead(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
 }
 
 // Draws an eye
-void Minion::_drawEye(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+void Farina::_drawEye(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                       const glm::mat4 &projMtx) const {
 
   _setMatrices(modelMtx, viewMtx, projMtx);
@@ -138,7 +171,7 @@ void Minion::_drawEye(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
 }
 
 // Draws a brow
-void Minion::_drawBrow(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+void Farina::_drawBrow(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                        const glm::mat4 &projMtx) const {
 
   _setMatrices(modelMtx, viewMtx, projMtx);
@@ -147,7 +180,7 @@ void Minion::_drawBrow(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
 }
 
 // Draws a hand
-void Minion::_drawHand(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+void Farina::_drawHand(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                        const glm::mat4 &projMtx) const {
 
   modelMtx = glm::scale(modelMtx, glm::vec3(0.5f, 0.5f, 0.5f));
@@ -158,7 +191,7 @@ void Minion::_drawHand(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
 }
 
 // Sends the MVP and normal matrices to the shader
-void Minion::_setMatrices(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
+void Farina::_setMatrices(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                           const glm::mat4 &projMtx) const {
   // Precompute the MVP matrix
   glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
@@ -176,7 +209,7 @@ void Minion::_setMatrices(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
 
 // _setColor
 // Sends the material color to the shader
-void Minion::_setColor(glm::vec3 color) const {
+void Farina::_setColor(glm::vec3 color) const {
   glProgramUniform3fv(_shaderProgramHandle, _materialColorUniformLocation, 1,
                       &color[0]);
 }

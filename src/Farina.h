@@ -1,5 +1,5 @@
-#ifndef MINION_H
-#define MINION_H
+#ifndef FARINA_H
+#define FARINA_H
 
 #include <glad/gl.h>
 
@@ -8,45 +8,50 @@
 #include <CSCI441/objects.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-class Minion {
+class Farina {
 public:
-  Minion(GLuint shaderProgramHandle, GLint mvpMtxUniformLocation,
+  Farina(GLuint shaderProgramHandle, GLint mvpMtxUniformLocation,
          GLint materialColorUniformLocation, GLint normalMtxUniformLocation,
          GLint modelMtxUniformLocation);
-  ~Minion();
+  ~Farina();
 
-  // Updates the minion's state.
-  void update(float time);
+  // Updates Farina's state.
+  void update(float time, const glm::vec3 &heroPosition, float turnSpeed);
 
-  // Draws the minion.
+  // Draws Farina
   void draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
 
-  // Gets the minion's position.
+  // Causes Farina to bounce away from a collision point
+  void bounceOff(const glm::vec3 &otherPosition);
+
+  // Get & set Farina's position.
   glm::vec3 getPosition() const;
-
-  // Gets the minion's head position.
-  glm::vec3 getHeadPosition() const;
-
-  // Sets the minion's position.
   void setPosition(glm::vec3 position);
 
-  // Gets the minion's direction.
-  glm::vec3 getDirection() const;
+  // Get & set Farina's heading.
+  glm::vec3 getHeading() const;
+  void setHeading(glm::vec3 heading);
 
-  // Sets the minion's direction.
-  void setDirection(glm::vec3 direction);
-
-  // Gets the minion's angle.
+  // Get & set Farina's angle.
   GLfloat getAngle() const;
-
-  // Sets the minion's angle.
   void setAngle(GLfloat angle);
+
+  // Get Farina's radius.
+  float getRadius() const;
 
 private:
   glm::vec3 _position;
-  glm::vec3 _direction;
+  glm::vec3 _heading;
   GLfloat _angle;
+
+  float _moveSpeed;
+  float _radius;
+  bool _alive;
+  bool _falling;
+  float _verticalVelocity;
+
   GLfloat _handBobOffset;
+  float _animPhase;
 
   GLuint _shaderProgramHandle;
   GLint _mvpMtxUniformLocation;

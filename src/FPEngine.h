@@ -10,11 +10,12 @@
 #include "Character.h"
 #include "Coin.h"
 #include "Enemy.h"
+#include "Farina.h"
 #include "ParticleSystem.h"
 #include "Wilfred.h"
 
-#include <vector>
 #include "Skybox.h"
+#include <vector>
 
 #include <vector>
 
@@ -103,9 +104,12 @@ private:
   glm::vec2 _cameraSpeed;
 
   // i have eliminated the other characters, it is only elster left...
+  // ^ nuh uh - mari
   Character *_pCharacter;
-    Wilfred *_pWilfred;
+  Wilfred *_pWilfred;
   Character *_pEnemyElster;
+  Farina *_pFarina;
+
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;

@@ -261,6 +261,54 @@ void FPEngine::mSetupShaders() {
   _elsterShaderAttributeLocations.vWeights =
       _elsterShaderProgram->getAttributeLocation("vWeights");
 
+  _tympaniusShaderProgram = new CSCI441::ShaderProgram("shaders/tympMP.v.glsl",
+                                                       "shaders/tympMP.f.glsl");
+
+  // Set Uniform Locations
+  _tympaniusShaderUniformLocations.mvpMatrix =
+      _tympaniusShaderProgram->getUniformLocation("mvpMatrix");
+  _tympaniusShaderUniformLocations.normalMatrix =
+      _tympaniusShaderProgram->getUniformLocation("normalMatrix");
+  _tympaniusShaderUniformLocations.modelMatrix =
+      _tympaniusShaderProgram->getUniformLocation("modelMatrix");
+
+  _tympaniusShaderUniformLocations.lightDir =
+      _tympaniusShaderProgram->getUniformLocation("lightDir");
+    _tympaniusShaderUniformLocations.lightPosition =
+      _tympaniusShaderProgram->getUniformLocation("lightPosition");
+    _tympaniusShaderUniformLocations.spotLightPosition =
+        _tympaniusShaderProgram->getUniformLocation("spotLightPosition");
+    _tympaniusShaderUniformLocations.spotLightDirection =
+        _tympaniusShaderProgram->getUniformLocation("spotLightDirection");
+    _tympaniusShaderUniformLocations.spotLightColor =
+        _tympaniusShaderProgram->getUniformLocation("spotLightColor");
+    _tympaniusShaderUniformLocations.pointLightColor =
+        _tympaniusShaderProgram->getUniformLocation("pointLightColor");
+  _tympaniusShaderUniformLocations.lightColor =
+      _tympaniusShaderProgram->getUniformLocation("lightColor");
+  _tympaniusShaderUniformLocations.ambientLightColor =
+      _tympaniusShaderProgram->getUniformLocation("ambientLightColor");
+
+  _tympaniusShaderUniformLocations.cameraPos =
+      _tympaniusShaderProgram->getUniformLocation("cameraPos");
+  _tympaniusShaderUniformLocations.shininessAlpha =
+      _tympaniusShaderProgram->getUniformLocation("shininessAlpha");
+  _tympaniusShaderUniformLocations.materialColor =
+      _tympaniusShaderProgram->getUniformLocation("materialColor");
+
+  _tympaniusShaderUniformLocations.textureMap =
+      _tympaniusShaderProgram->getUniformLocation("textureMap");
+  _tympaniusShaderUniformLocations.isTextured =
+      _tympaniusShaderProgram->getUniformLocation("isTextured");
+
+  // Set Attribute Locations
+  _tympaniusShaderAttributeLocations.vPos =
+      _tympaniusShaderProgram->getAttributeLocation("vPos");
+  _tympaniusShaderAttributeLocations.vNormal =
+      _tympaniusShaderProgram->getAttributeLocation("vNormal");
+  _tympaniusShaderAttributeLocations.texCoord =
+      _tympaniusShaderProgram->getAttributeLocation("vTexPos");
+
   // load tess shader for ground
   _groundTessShaderProgram = new CSCI441::ShaderProgram(
       "shaders/ground.v.glsl", "shaders/ground.tcs.glsl",
@@ -318,13 +366,13 @@ void FPEngine::mSetupShaders() {
 void FPEngine::mSetupTextures() {
   // TODO #09 - load textures
   _texHandles[TEXTURE_ID::GROUND] =
-      _loadAndRegisterTexture("./assets/textures/ground.jpg");
+      _loadAndRegisterTexture("assets/textures/floor.png");
   _texHandles[TEXTURE_ID::ENEMY] =
-      _loadAndRegisterTexture("./assets/textures/goomba.png");
+      _loadAndRegisterTexture("assets/textures/goomba.png");
   _texHandles[TEXTURE_ID::COIN] =
-      _loadAndRegisterTexture("./assets/textures/coin.png");
+      _loadAndRegisterTexture("assets/textures/coin.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
-      _loadAndRegisterTexture("./assets/textures/sonic_coin.png");
+      _loadAndRegisterTexture("assets/textures/sonic_coin.png");
 }
 
 void FPEngine::mSetupBuffers() {
@@ -436,7 +484,7 @@ void FPEngine::mSetupScene() {
                               _elsterShaderUniformLocations.materialSpecular,
                               _elsterShaderUniformLocations.materialShininess);
 
-  if (!_pCharacter->loadFromFile("./assets/models/heroes/Elster/elster.glb")) {
+  if (!_pCharacter->loadFromFile("assets/models/heroes/Elster/elster.glb")) {
     fprintf(stderr, "Failed to load character model\n");
   }
 
@@ -452,7 +500,7 @@ void FPEngine::mSetupScene() {
   _particleSystem = new ParticleSystem();
 
   // Spawn enemies
-  _spawnEnemies(10); // Spawn 10 enemies
+  _spawnEnemies(2); // Spawn 10 enemies
 
   // Spawn coins at corners
   _spawnCoins();
@@ -610,20 +658,20 @@ void FPEngine::_generateEnvironment() {
           continue;
         }
 
-        if (getRand() < 0.5f) {
-          BushData bush;
-          bush.size = 2.0f;
-          float bushX = i + getRand() - 2;
-          float bushZ = j + getRand() - 2;
-          float terrainY = _getTerrainHeight(bushX, bushZ);
-          // bush sits on the terrain
-          bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
-          bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
-                                 0.588 + (getRand() - 2) * 0.15,
-                                 0.455 + (getRand() - 2) * 0.15);
-          _bushes.push_back(bush);
-          continue;
-        }
+        // if (getRand() < 0.5f) {
+        //   BushData bush;
+        //   bush.size = 2.0f;
+        //   float bushX = i + getRand() - 2;
+        //   float bushZ = j + getRand() - 2;
+        //   float terrainY = _getTerrainHeight(bushX, bushZ);
+        //   // bush sits on the terrain
+        //   bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
+        //   bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
+        //                          0.588 + (getRand() - 2) * 0.15,
+        //                          0.455 + (getRand() - 2) * 0.15);
+        //   _bushes.push_back(bush);
+        //   continue;
+        // }
 
         // translate to spot
         float treeX = i + getRand() - 2;
@@ -783,14 +831,31 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
     CSCI441::drawSolidSphere(1.0f, 16, 16);
   }
-
+  
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightDir, lightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightPosition, lightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightColor, lightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightColor, spotLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.cameraPos, cameraPos);
   // Draw enemies (only if they also didn't fall tragically to their deaths)
   for (auto enemy : _enemies) {
     if (enemy->isAlive()) {
-      enemy->draw(_spriteShaderProgram->getShaderProgramHandle(),
-                  _spriteShaderUniformLocations.mvpMatrix,
-                  _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
-                  _texHandles[TEXTURE_ID::ENEMY]);
+      // enemy->draw(_spriteShaderProgram->getShaderProgramHandle(),
+      //             _spriteShaderUniformLocations.mvpMatrix,
+      //             _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
+      //             _texHandles[TEXTURE_ID::ENEMY]);
+      enemy->draw(glm::mat4(1.0f), viewMtx, projMtx);
     }
   }
 
@@ -1129,93 +1194,9 @@ float FPEngine::_getTerrainHeight(float x, float z) const {
     return -1000.0f; // Return very low height if out of bounds (for falling)
   }
 
-  // Convert world coordinates to normalized UV coordinates [0, 1]
-  float u = (x + WORLD_SIZE) / (2.0f * WORLD_SIZE);
-  float v = (z + WORLD_SIZE) / (2.0f * WORLD_SIZE);
-
-  // Clamp to [0, 1] just in case
-  u = glm::clamp(u, 0.0f, 1.0f);
-  v = glm::clamp(v, 0.0f, 1.0f);
-
   // Hill height parameter (matching shader)
   const float hillHeight = 56.25f;
-
-  // Corner positions of the patch (matching the ground buffer)
-  glm::vec3 p00(-WORLD_SIZE, 0.0f, -WORLD_SIZE);
-  glm::vec3 p10(WORLD_SIZE, 0.0f, -WORLD_SIZE);
-  glm::vec3 p01(-WORLD_SIZE, 0.0f, WORLD_SIZE);
-  glm::vec3 p11(WORLD_SIZE, 0.0f, WORLD_SIZE);
-
-  // Bezier blending functions (matching shader)
-  auto B0 = [](float t) { return (1.0f - t) * (1.0f - t) * (1.0f - t); };
-  auto B1 = [](float t) { return 3.0f * t * (1.0f - t) * (1.0f - t); };
-  auto B2 = [](float t) { return 3.0f * t * t * (1.0f - t); };
-  auto B3 = [](float t) { return t * t * t; };
-
-  // Get control point function (matching shader logic)
-  auto getControlPoint = [&](int i, int j) -> glm::vec3 {
-    // Row 0 (bottom edge - low height)
-    if (i == 0 && j == 0)
-      return p00;
-    if (i == 0 && j == 1)
-      return glm::mix(p00, p10, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 0 && j == 2)
-      return glm::mix(p00, p10, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 0 && j == 3)
-      return p10;
-
-    // Row 1 (first interior row - medium height)
-    if (i == 1 && j == 0)
-      return glm::mix(p00, p01, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 1 && j == 1)
-      return glm::mix(glm::mix(p00, p10, 0.333f), glm::mix(p01, p11, 0.333f),
-                      0.333f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 1 && j == 2)
-      return glm::mix(glm::mix(p00, p10, 0.667f), glm::mix(p01, p11, 0.667f),
-                      0.333f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 1 && j == 3)
-      return glm::mix(p10, p11, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-
-    // Row 2 (second interior row - medium height)
-    if (i == 2 && j == 0)
-      return glm::mix(p00, p01, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 2 && j == 1)
-      return glm::mix(glm::mix(p00, p10, 0.333f), glm::mix(p01, p11, 0.333f),
-                      0.667f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 2 && j == 2)
-      return glm::mix(glm::mix(p00, p10, 0.667f), glm::mix(p01, p11, 0.667f),
-                      0.667f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 2 && j == 3)
-      return glm::mix(p10, p11, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-
-    // Row 3 (top edge - low height)
-    if (i == 3 && j == 0)
-      return p01;
-    if (i == 3 && j == 1)
-      return glm::mix(p01, p11, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 3 && j == 2)
-      return glm::mix(p01, p11, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 3 && j == 3)
-      return p11;
-
-    return glm::vec3(0.0f);
-  };
-
-  // Compute position using bicubic Bezier interpolation
-  glm::vec3 pos(0.0f);
-  for (int i = 0; i < 4; i++) {
-    float bu = (i == 0) ? B0(u) : (i == 1) ? B1(u) : (i == 2) ? B2(u) : B3(u);
-    for (int j = 0; j < 4; j++) {
-      float bv = (j == 0) ? B0(v) : (j == 1) ? B1(v) : (j == 2) ? B2(v) : B3(v);
-      pos += getControlPoint(i, j) * bu * bv;
-    }
-  }
-
-  return pos.y;
+  return hillHeight;
 }
 
 glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
@@ -1301,9 +1282,9 @@ GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
     glBindTexture(GL_TEXTURE_2D, textureHandle);
     // set texture parameters
     // TODO #03 - mag filter
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     // TODO #04 - min filter
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     // TODO #05 - wrap s
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     // TODO #06 - wrap t
@@ -1346,7 +1327,8 @@ void FPEngine::_spawnEnemies(int numEnemies) {
     // rand heading
     float heading = getRand() * 2.0f * M_PI;
 
-    Enemy *enemy = new Enemy(glm::vec3(x, y, z), heading);
+    Tympanius *enemy = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
+
     _enemies.push_back(enemy);
   }
 

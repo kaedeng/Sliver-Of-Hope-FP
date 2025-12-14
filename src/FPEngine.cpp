@@ -17,7 +17,7 @@ FPEngine::FPEngine()
       _cameraSpeed({0.0f, 0.0f}), _groundVAO(0), _numGroundPoints(0),
       _lightingShaderProgram(nullptr),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
-      _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
+      _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
       _characterDead(false), _particleSystem(nullptr), _coinsCollected(0) {
@@ -30,6 +30,7 @@ FPEngine::~FPEngine() {
   delete _arcBallCam;
   delete _firstPersonCam;
   delete _pCharacter;
+  delete _pTympanius;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
   delete _pSkybox;
@@ -493,6 +494,9 @@ void FPEngine::mSetupScene() {
   // hillHeight)
   _pCharacter->setPosition(glm::vec3(0.0f, 36.0f, 0.0f));
 
+  _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
+  _pTympanius->setPosition(glm::vec3(0.0f, _getTerrainHeight(0.0f, 0.0f), 0.0f));
+
   // Set lighting parameters
   _setLightingParameters();
 
@@ -500,7 +504,7 @@ void FPEngine::mSetupScene() {
   _particleSystem = new ParticleSystem();
 
   // Spawn enemies
-  _spawnEnemies(2); // Spawn 10 enemies
+  _spawnEnemies(0); // Spawn 10 enemies
 
   // Spawn coins at corners
   _spawnCoins();
@@ -848,16 +852,10 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
   _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.cameraPos, cameraPos);
-  // Draw enemies (only if they also didn't fall tragically to their deaths)
-  for (auto enemy : _enemies) {
-    if (enemy->isAlive()) {
-      // enemy->draw(_spriteShaderProgram->getShaderProgramHandle(),
-      //             _spriteShaderUniformLocations.mvpMatrix,
-      //             _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
-      //             _texHandles[TEXTURE_ID::ENEMY]);
-      enemy->draw(glm::mat4(1.0f), viewMtx, projMtx);
+  
+    if (_pTympanius->isAlive()) { 
+      _pTympanius->draw(glm::mat4(1.0f), viewMtx, projMtx);
     }
-  }
 
   // coins
   for (auto coin : _coins) {
@@ -1043,6 +1041,13 @@ void FPEngine::_updateScene() {
 
   // update enemies
   const float enemyTurnSpeed = 1.5f; // Radians per second
+
+  // update enemy tympanius
+  _pTympanius->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 tympaniusPos = _pTympanius->getPosition();
+  glm::vec3 newTympaniusPos = _checkAndResolveCollisions(glm::vec3(tympaniusPos.x, _getTerrainHeight(tympaniusPos.x, tympaniusPos.z), tympaniusPos.z), 0.5f);
+  _pTympanius->setPosition(newTympaniusPos);
+
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
       enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
@@ -1396,6 +1401,22 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   glm::vec3 playerPos = _pCharacter->getPosition();
   const float playerRadius = 0.5f;
+  const float maxVerticalDistance = 2.0f;
+
+  // Check collision with enemy Elster
+  glm::vec3 tympaniusPos = _pTympanius->getPosition();
+  float tympaniusDistance = glm::length(glm::vec2(playerPos.x - tympaniusPos.x, playerPos.z - tympaniusPos.z));
+  float tympaniusMinDistance = playerRadius + 0.5f; // Tympanius's radius
+  float tympaniusVerticalDistance = abs(playerPos.y - tympaniusPos.y);
+
+  if (tympaniusDistance < tympaniusMinDistance &&
+      tympaniusVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by Tympanius! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
 
   for (auto enemy : _enemies) {
     if (!enemy->isAlive() || enemy->isFalling())

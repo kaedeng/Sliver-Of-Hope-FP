@@ -30,7 +30,7 @@ public:
     glm::vec3 getPosition() const { return _position; }
 
     // Sets tympanius's position
-    void setPosition(glm::vec3 position) { _position = position; }
+    void setPosition(glm::vec3 position) { _position = glm::vec3(position.x, position.y+_floatingHeight, position.z); }
 
     // Returns tympanius's heading
     glm::vec3 getHeading() const { return _heading; }

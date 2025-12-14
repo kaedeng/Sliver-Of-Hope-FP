@@ -104,6 +104,8 @@ private:
 
   // i have eliminated the other characters, it is only elster left...
   Character *_pCharacter;
+  Tympanius *_pTympanius;
+
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;

@@ -97,11 +97,11 @@ private:
   /// \desc the arcball camera in our world
   CSCI441::Camera *_cam;
   CSCI441::ArcballCam *_arcBallCam;
-  CSCI441::FreeCam *_freeCam;
   CSCI441::FreeCam *_firstPersonCam;
   /// \desc pair of values to store the speed the camera can move/rotate.
   /// \brief x = forward/backward delta, y = rotational delta
   glm::vec2 _cameraSpeed;
+  float _cameraPitch;
 
   // i have eliminated the other characters, it is only elster left...
   // ^ nuh uh - mari

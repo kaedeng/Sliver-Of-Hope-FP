@@ -48,7 +48,8 @@ void Farina::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 void Farina::update(float time, const glm::vec3 &heroPosition,
                     float turnSpeed) {
   // Update hand animation
-  _handBobOffset = 1.0f * sin(time * 6.0f);
+  _animPhase += time;
+  _handBobOffset = 1.0f * sin(_animPhase * 6.0f);
 
   // Update y position if falling
   if (_falling) {

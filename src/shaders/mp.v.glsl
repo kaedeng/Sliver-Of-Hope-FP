@@ -43,7 +43,7 @@ void main() {
     vec3 diffuse = lightColor * materialColor * max(dot(normal, lightVec), 0.0);
 
     // Calculate ambient so that the shadow is not completely black
-    vec3 ambient = vec3(0.0f, 0.0f, 0.0f) * materialColor;
+    vec3 ambient = vec3(0.71, 0.54, 0.7) * materialColor;
 
     // Specular
     vec3 viewVec = normalize(cameraPosition - worldPos);

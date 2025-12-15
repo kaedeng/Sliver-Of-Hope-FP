@@ -396,8 +396,22 @@ void FPEngine::mSetupShaders() {
     _textureShaderProgram = new CSCI441::ShaderProgram("shaders/lab06.v.glsl", "shaders/lab06.f.glsl" );
     // query uniform locations
     _textureShaderUniformLocations.mvpMatrix      = _textureShaderProgram->getUniformLocation("mvpMatrix");
+    _textureShaderUniformLocations.modelMatrix      = _textureShaderProgram->getUniformLocation("modelMatrix");
+    _textureShaderUniformLocations.normalMatrix      = _textureShaderProgram->getUniformLocation("normalMatrix");
+    
     // TODO #12A - texture map
     _textureShaderUniformLocations.texMap      = _textureShaderProgram->getUniformLocation("textureMap");
+
+    
+  _textureShaderUniformLocations.spotLightPosition =
+      _textureShaderProgram->getUniformLocation("spotLightPosition");
+  _textureShaderUniformLocations.spotLightDirection =
+      _textureShaderProgram->getUniformLocation("spotLightDirection");
+  _textureShaderUniformLocations.spotLightColor =
+      _textureShaderProgram->getUniformLocation("spotLightColor");
+
+   _textureShaderUniformLocations.cameraPosition =
+      _textureShaderProgram->getUniformLocation("cameraPosition");
 
     // set static uniforms
     // TODO #13 - set uniform
@@ -408,7 +422,7 @@ void FPEngine::mSetupShaders() {
   _textureShaderAttributeLocations.vNormal =
       _textureShaderProgram->getAttributeLocation("vNormal");
   _textureShaderAttributeLocations.texCoord =
-      _textureShaderProgram->getAttributeLocation("vTexPos");
+      _textureShaderProgram->getAttributeLocation("vTexCoord");
 
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
                                          _textureShaderAttributeLocations.texCoord);
@@ -673,7 +687,13 @@ void FPEngine::_setLightingParameters() {
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor, pointLightColor);
 
-  
+  _textureShaderProgram->useProgram();
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightColor, spotLightColor);
 }
 
 //*************************************************************************************
@@ -869,6 +889,11 @@ void FPEngine::_generateEnvironment() {
 void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                             const glm::vec3 &cameraPos) const {
   _pSkybox->draw(viewMtx, projMtx);
+  
+
+  const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
+  const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
+  const glm::vec3 spotLightDirection = glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
 
   // tess ground
   _groundTessShaderProgram->useProgram();
@@ -900,16 +925,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       lightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightPosition,
-      glm::vec3(1.0f, 0.0f, 1.0f));
+      lightPosition);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor,
       pointLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightPosition,
-      _firstPersonCam->getPosition());
+      spotLightPosition);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightDirection,
-      glm::normalize(_firstPersonCam->getLookAtPoint() - _firstPersonCam->getPosition()));
+     spotLightDirection);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightColor,
       spotLightColor);
@@ -946,11 +971,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // lighting shader
   _lightingShaderProgram->useProgram();
 
-  const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
-    const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
-    const glm::vec3 spotLightDirection =
-        glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.lightDirection, lightDirection);
   _lightingShaderProgram->setProgramUniform(
@@ -977,7 +997,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // Farina
   _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
-    _textureShaderProgram->useProgram();
+  _textureShaderProgram->useProgram();
+
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightColor, spotLightColor);
+  _lightingShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.cameraPosition, cameraPos);
   
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
@@ -985,10 +1014,15 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
   for (const auto &bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2.0f, bush.size));
-      glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*4.0f, bush.size));
+    glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
+    const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(bushModelMtx)));
 
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.modelMatrix, bushModelMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.normalMatrix, normalMtx);
+    
+    
     //_lightingShaderProgram->setProgramUniform(
         //_lightingShaderUniformLocations.materialColor, bush.color);
 
@@ -1004,9 +1038,9 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.spotLightDirection, spotLightDirection);
   _tympaniusShaderProgram->setProgramUniform(
-      _tympaniusShaderUniformLocations.lightColor, lightColor);
-  _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.spotLightColor, spotLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightColor, lightColor);
   _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
   _tympaniusShaderProgram->setProgramUniform(

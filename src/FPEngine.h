@@ -126,7 +126,7 @@ private:
 
   Skybox *_pSkybox;
 
-  const glm::vec3 spotLightColor = {1.0f, 1.0f, 1.0f};
+  const glm::vec3 spotLightColor = {0.95f, 1.0f, 0.9f};
   const glm::vec3 pointLightColor = {1.0f, 0.0f, 0.0f};
   const glm::vec3 lightDirection = {-1.0f, 0.1f, -0.2f};
   const glm::vec3 lightColor = {0, 0, 0};
@@ -212,6 +212,7 @@ private:
     GLint vNormal;
 
   } _lightingShaderAttributeLocations;
+
   CSCI441::ShaderProgram
       *_textureShaderProgram; // the wrapper for our shader program
   struct TextureShaderUniformLocations {
@@ -219,8 +220,14 @@ private:
     GLint mvpMatrix;
     // TODO #11 - texture map
     GLint texMap;
-
+    GLint spotLightPosition;
+    GLint spotLightDirection;
+    GLint spotLightColor;
+    GLint normalMatrix;
+    GLint modelMatrix;
+    GLint cameraPosition;
   } _textureShaderUniformLocations;
+
   struct TextureShaderAttributeLocations {
         /// \desc vertex position location
         GLint vPos;

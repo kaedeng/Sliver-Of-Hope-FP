@@ -518,10 +518,6 @@ void FPEngine::_setLightingParameters() {
   const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
   const glm::vec3 spotLightDirection =
       glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-  const glm::vec3 spotLightColor(0.0f, 0.0f, 1.0f);
-  const glm::vec3 pointLightColor(1.0f, 0.0f, 0.0f);
-  const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
-  const glm::vec3 lightColor(1, 0.65, 0.3);
   _lightingShaderProgram->useProgram();
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.lightDirection, lightDirection);
@@ -754,16 +750,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // Set lighting uniforms
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightDirection,
-      glm::vec3(-1.0f, 0.1f, -0.2f));
+      lightDirection);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightColor,
-      glm::vec3(1.0f, 0.65f, 0.3f));
+      lightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightPosition,
       glm::vec3(1.0f, 0.0f, 1.0f));
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor,
-      glm::vec3(1.0f, 0.0f, 0.0f));
+      pointLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightPosition,
       _firstPersonCam->getPosition());
@@ -772,7 +768,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       glm::normalize(_firstPersonCam->getLookAtPoint() - _firstPersonCam->getPosition()));
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightColor,
-      glm::vec3(0.0f, 0.0f, 1.0f));
+      spotLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.cameraPosition, cameraPos);
 
@@ -811,10 +807,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
     const glm::vec3 spotLightDirection =
         glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-  const glm::vec3 spotLightColor(0.0f, 0.0f, 1.0f);
-  const glm::vec3 pointLightColor(1.0f, 0.0f, 0.0f);
-  const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
-  const glm::vec3 lightColor(1.0f, 0.65f, 0.3f);
 
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.lightDirection, lightDirection);

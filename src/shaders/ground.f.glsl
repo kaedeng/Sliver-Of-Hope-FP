@@ -74,7 +74,7 @@ void main() {
     vec3 spotColor = (spotDiffuse + spotSpecular) * intensity * attenuation;
 
     // Ambient
-    vec3 ambient = vec3(0.3, 0.3, 0.3) * texColor.rgb;
+    vec3 ambient = vec3(0.0, 0.0, 0.0) * texColor.rgb;
 
     // Combine all lighting
     vec3 finalColor = ambient + dirColor + pointColor + spotColor;

@@ -118,6 +118,11 @@ private:
 
   Skybox *_pSkybox;
 
+  const glm::vec3 spotLightColor = {1.0f, 1.0f, 1.0f};
+  const glm::vec3 pointLightColor = {1.0f, 0.0f, 0.0f};
+  const glm::vec3 lightDirection = {-1.0f, 0.1f, -0.2f};
+  const glm::vec3 lightColor = {0, 0, 0};
+
   // game objects
   std::vector<Enemy *> _enemies;
   std::vector<Coin *> _coins;

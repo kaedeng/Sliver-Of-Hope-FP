@@ -515,9 +515,9 @@ void FPEngine::mSetupScene() {
 void FPEngine::_setLightingParameters() {
   // TODO #6: set lighting uniforms
   const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
-  const glm::vec3 spotLightPosition = glm::vec3(1.0f, 7.0f, 1.0f);
+  const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
   const glm::vec3 spotLightDirection =
-      glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f) - spotLightPosition);
+      glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
   const glm::vec3 spotLightColor(0.0f, 0.0f, 1.0f);
   const glm::vec3 pointLightColor(1.0f, 0.0f, 0.0f);
   const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
@@ -766,11 +766,10 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       glm::vec3(1.0f, 0.0f, 0.0f));
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightPosition,
-      glm::vec3(1.0f, 7.0f, 1.0f));
+      _firstPersonCam->getPosition());
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightDirection,
-      glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f) -
-                     glm::vec3(1.0f, 7.0f, 1.0f)));
+      glm::normalize(_firstPersonCam->getLookAtPoint() - _firstPersonCam->getPosition()));
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightColor,
       glm::vec3(0.0f, 0.0f, 1.0f));
@@ -809,9 +808,9 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _lightingShaderProgram->useProgram();
 
   const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
-  const glm::vec3 spotLightPosition = glm::vec3(1.0f, 7.0f, 1.0f);
-  const glm::vec3 spotLightDirection =
-      glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f) - spotLightPosition);
+    const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
+    const glm::vec3 spotLightDirection =
+        glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
   const glm::vec3 spotLightColor(0.0f, 0.0f, 1.0f);
   const glm::vec3 pointLightColor(1.0f, 0.0f, 0.0f);
   const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
@@ -1104,7 +1103,7 @@ void FPEngine::_updateScene() {
 
   // Check collisions
   _checkEnemyCollisions();
-  _checkPlayerEnemyCollision();
+  //_checkPlayerEnemyCollision();
   _checkCoinCollection();
 
   // Update camera to follow character
@@ -1126,6 +1125,27 @@ void FPEngine::_updateScene() {
     _firstPersonCam->setPhi(_cameraPitch);
 
     _firstPersonCam->recomputeOrientation();
+      const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
+      const glm::vec3 spotLightDirection =
+          glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
+      _lightingShaderProgram->useProgram();
+  _lightingShaderProgram->setProgramUniform(
+      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _lightingShaderProgram->setProgramUniform(
+      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
+
+  _elsterShaderProgram->useProgram();
+  _elsterShaderProgram->setProgramUniform(
+      _elsterShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _elsterShaderProgram->setProgramUniform(
+      _elsterShaderUniformLocations.spotLightDirection, spotLightDirection);
+
+  // set lighting for ground tess shader
+  _groundTessShaderProgram->useProgram();
+  _groundTessShaderProgram->setProgramUniform(
+      _groundTessShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _groundTessShaderProgram->setProgramUniform(
+      _groundTessShaderUniformLocations.spotLightDirection, spotLightDirection);
   }
 }
 

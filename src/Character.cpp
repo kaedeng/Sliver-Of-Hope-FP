@@ -2,6 +2,7 @@
 
 #define TINYGLTF_IMPLEMENTATION
 #include <tiny_gltf.h>
+#include <stb_image.h>
 
 #include <iostream>
 #include <unordered_map>
@@ -57,9 +58,13 @@ Character::~Character() {
 }
 
 bool Character::loadFromFile(const std::string& filepath) {
+    // Reset stbi flip state to ensure consistent texture loading
+    // (CSCI441::ModelLoader sets this to true which can affect subsequent loads)
+    stbi_set_flip_vertically_on_load(false);
+
     tinygltf::TinyGLTF loader;
     std::string err, warn;
-    
+
     _model = new tinygltf::Model();
     
     bool ret = false;

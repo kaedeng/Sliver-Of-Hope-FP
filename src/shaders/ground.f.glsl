@@ -33,7 +33,7 @@ void main() {
     vec3 viewVec = normalize(cameraPosition - worldPos);
     vec3 reflectVec = reflect(-lightVec, normal);
     float spec = pow(max(dot(viewVec, reflectVec), 0.0), 32.0);
-    vec3 specular = vec3(0.3) * spec;
+    vec3 specular = vec3(0.0) * spec;
 
     vec3 dirColor = diffuse + specular;
 
@@ -74,7 +74,7 @@ void main() {
     vec3 spotColor = (spotDiffuse + spotSpecular) * intensity;
 
     // Ambient
-    vec3 ambient = vec3(0.3, 0.3, 0.3) * texColor.rgb;
+    vec3 ambient = vec3(0.0, 0.0, 0.0) * texColor.rgb;
 
     // Combine all lighting
     vec3 finalColor = ambient + dirColor + pointColor + spotColor;

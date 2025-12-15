@@ -18,7 +18,7 @@ uniform vec3 materialDiffuse;
 uniform vec3 materialSpecular;
 uniform float materialShininess;
 
-uniform vec3 ambientLight = vec3(0.2, 0.2, 0.2);
+uniform vec3 ambientLight = vec3(0.0, 0.0, 0.0);
 
 // Texture properties
 uniform bool useTexture = false;

@@ -18,11 +18,12 @@ FPEngine::FPEngine()
       _leftMouseButtonState(GLFW_RELEASE), _cam(nullptr),
       _cameraSpeed({0.0f, 0.0f}), _groundVAO(0), _numGroundPoints(0),
       _lightingShaderProgram(nullptr),
+_textureShaderProgram(nullptr),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
       _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0) {
+      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0){
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -35,6 +36,7 @@ FPEngine::~FPEngine() {
     delete _pWilfred;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
+    delete _textureShaderProgram;
   delete _pSkybox;
   delete _spriteShaderProgram;
   delete _particleSystem;
@@ -322,6 +324,20 @@ void FPEngine::mSetupShaders() {
       _spriteShaderProgram->getUniformLocation("mvpMatrix");
   _spriteShaderUniformLocations.spriteTexture =
       _spriteShaderProgram->getUniformLocation("spriteTexture");
+
+    // texture shader
+    _textureShaderProgram = new CSCI441::ShaderProgram("shaders/lab06.v.glsl", "shaders/lab06.f.glsl" );
+    // query uniform locations
+    _textureShaderUniformLocations.mvpMatrix      = _textureShaderProgram->getUniformLocation("mvpMatrix");
+    // TODO #12A - texture map
+    _textureShaderUniformLocations.texMap      = _textureShaderProgram->getUniformLocation("texMap");
+
+    // set static uniforms
+    // TODO #13 - set uniform
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.texMap,0);
+
+    CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
+                                         _textureShaderAttributeLocations.vTexCoord);
 }
 
 void FPEngine::mSetupTextures() {
@@ -334,7 +350,6 @@ void FPEngine::mSetupTextures() {
       _loadAndRegisterTexture("./assets/textures/coin.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
       _loadAndRegisterTexture("./assets/textures/sonic_coin.png");
-    _texHandles[TEXTURE_ID::PLAYER] = 
 }
 
 void FPEngine::mSetupBuffers() {
@@ -553,6 +568,8 @@ void FPEngine::mCleanupShaders() {
   _groundTessShaderProgram = nullptr;
   delete _spriteShaderProgram;
   _spriteShaderProgram = nullptr;
+    delete _textureShaderProgram;
+    _textureShaderProgram = nullptr;
 }
 
 void FPEngine::mCleanupBuffers() {
@@ -837,15 +854,29 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
     /// OLD MAN NO MORE
 
+    _textureShaderProgram->useProgram();
+glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::COIN]);
+
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    //
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    //
+    // // IMPORTANT
+    // glGenerateMipmap(GL_TEXTURE_2D);
+
   for (const auto& bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
     bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2, bush.size));
+      glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
 
-    _computeAndSendMatrixUniforms(bushModelMtx, viewMtx, projMtx);
-    _lightingShaderProgram->setProgramUniform(
-        _lightingShaderUniformLocations.materialColor, bush.color);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
+    //_lightingShaderProgram->setProgramUniform(
+        //_lightingShaderUniformLocations.materialColor, bush.color);
 
-      CSCI441::drawSolidCube(2.0f);
+      CSCI441::drawSolidCubeTextured(2.0f);
   }
 
   // Draw enemies (only if they also didn't fall tragically to their deaths)
@@ -873,6 +904,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         _spriteShaderUniformLocations.mvpMatrix,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
+
 }
 
 void FPEngine::_updateScene() {

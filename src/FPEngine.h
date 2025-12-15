@@ -78,7 +78,7 @@ private:
   GLint _leftMouseButtonState;
 
   /// \desc total number of textures in our scene
-  static constexpr GLuint NUM_TEXTURES = 4;
+  static constexpr GLuint NUM_TEXTURES = 5;
   /// \desc used to index through our texture array to give named access
   enum TEXTURE_ID {
     /// \desc ground texture
@@ -143,12 +143,18 @@ private:
   /// \desc information list of all the trees to draw
   std::vector<TreeData> _trees;
 
+  struct BushVertexData {
+    glm::vec3 position;
+    glm::vec2 texCoords;
+  };
   struct BushData {
     glm::vec3 position;
     glm::vec3 color;
     GLfloat size;
   };
   std::vector<BushData> _bushes;
+
+  void _createQuad(GLuint VAO, GLuint VBO, GLuint IBO, GLsizei& numVAOPoints) const;
 
   /// \desc generates tree information to make up our scene
   void _generateEnvironment();
@@ -190,6 +196,23 @@ private:
     GLint vNormal;
 
   } _lightingShaderAttributeLocations;
+  CSCI441::ShaderProgram
+      *_textureShaderProgram; // the wrapper for our shader program
+  struct TextureShaderUniformLocations {
+    /// \desc precomputed MVP matrix location
+    GLint mvpMatrix;
+    // TODO #11 - texture map
+    GLint texMap;
+
+  } _textureShaderUniformLocations;
+  struct TextureShaderAttributeLocations {
+    /// \desc vertex position location
+    GLint vPos;
+    GLint vNormal;
+    // TODO #10 - texture coordinate
+    GLint vTexCoord;
+
+  } _textureShaderAttributeLocations;
 
   // Shaders for elster
   CSCI441::ShaderProgram *_elsterShaderProgram;

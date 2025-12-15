@@ -40,6 +40,7 @@ public:
     // animation control functions
     void playAnimation(const std::string& animationName);
     void update(float deltaTime);
+    void update(float deltaTime, const glm::vec3& targetPosition, float turnSpeed);
     
     // movement functions
     void moveForward(float amount);
@@ -78,6 +79,8 @@ private:
     // character transform
     glm::vec3 _position;
     float _heading; // rotation around Y axis
+    glm::vec3 _headingVector; // normalized direction vector for pathfinding
+    float _moveSpeed; // movement speed for enemy AI
     
     // animation states
     struct AnimationState {

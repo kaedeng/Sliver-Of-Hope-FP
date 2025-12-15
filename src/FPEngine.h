@@ -10,11 +10,15 @@
 #include "Character.h"
 #include "Coin.h"
 #include "Enemy.h"
+#include "Tympanius.h"
+#include "TympaniusShaderAttributeLocations.hpp"
+#include "TympaniusShaderUniformLocations.hpp"
+#include "Farina.h"
 #include "ParticleSystem.h"
 #include "Wilfred.h"
 
-#include <vector>
 #include "Skybox.h"
+#include <vector>
 
 #include <vector>
 
@@ -100,15 +104,20 @@ private:
   /// \desc the arcball camera in our world
   CSCI441::Camera *_cam;
   CSCI441::ArcballCam *_arcBallCam;
-  CSCI441::FreeCam *_freeCam;
   CSCI441::FreeCam *_firstPersonCam;
   /// \desc pair of values to store the speed the camera can move/rotate.
   /// \brief x = forward/backward delta, y = rotational delta
   glm::vec2 _cameraSpeed;
+  float _cameraPitch;
 
   // i have eliminated the other characters, it is only elster left...
+  // ^ nuh uh - mari
   Character *_pCharacter;
-    Wilfred *_pWilfred;
+  Tympanius *_pTympanius;
+  Wilfred *_pWilfred;
+  Character *_pEnemyElster;
+  Farina *_pFarina;
+
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;
@@ -117,8 +126,13 @@ private:
 
   Skybox *_pSkybox;
 
+  const glm::vec3 spotLightColor = {1.0f, 1.0f, 1.0f};
+  const glm::vec3 pointLightColor = {1.0f, 0.0f, 0.0f};
+  const glm::vec3 lightDirection = {-1.0f, 0.1f, -0.2f};
+  const glm::vec3 lightColor = {0, 0, 0};
+
   // game objects
-  std::vector<Enemy *> _enemies;
+  std::vector<Tympanius *> _enemies;
   std::vector<Coin *> _coins;
   ParticleSystem *_particleSystem;
   int _coinsCollected;
@@ -247,6 +261,13 @@ private:
     GLint vJoints;
     GLint vWeights;
   } _elsterShaderAttributeLocations;
+
+  /// \desc shader program that performs lighting
+    CSCI441::ShaderProgram* _tympaniusShaderProgram ;   // the wrapper for our shader program
+    /// \desc stores the locations of all of our shader uniforms
+    TympaniusShaderUniformLocations _tympaniusShaderUniformLocations;
+    /// \desc stores the locations of all of our shader attributes
+    TympaniusShaderAttributeLocations _tympaniusShaderAttributeLocations;
 
   // tess shaders for ground
   CSCI441::ShaderProgram *_groundTessShaderProgram;

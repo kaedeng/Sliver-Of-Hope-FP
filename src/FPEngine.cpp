@@ -8,6 +8,8 @@
 #include <glm/gtc/constants.hpp> // for glm::pi()
 #include <glm/gtc/type_ptr.hpp>  // for glm::value_ptr()
 
+#include <iostream>
+
 //*************************************************************************************
 //
 // Public Interface
@@ -16,7 +18,8 @@ FPEngine::FPEngine()
     : CSCI441::OpenGLEngine(4, 1, 640, 480, "FP: The Big Spooky"),
       _mousePosition({MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED}),
       _leftMouseButtonState(GLFW_RELEASE), _cam(nullptr),
-      _cameraSpeed({0.0f, 0.0f}), _groundVAO(0), _numGroundPoints(0),
+      _cameraSpeed({0.0f, 0.0f}), _cameraPitch(glm::pi<float>() * 0.5f),
+      _groundVAO(0), _numGroundPoints(0),
       _lightingShaderProgram(nullptr),
     _spriteShaderProgram(nullptr), 
     _spriteShaderUniformLocations( {-1, -1} ),
@@ -24,7 +27,8 @@ FPEngine::FPEngine()
     _textureShaderUniformLocations({-1, -1}),
     _textureShaderAttributeLocations({-1, -1, -1}),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
-      _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
+      _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
+      _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
       _characterDead(false), _particleSystem(nullptr), _coinsCollected(0){
@@ -37,7 +41,10 @@ FPEngine::~FPEngine() {
   delete _arcBallCam;
   delete _firstPersonCam;
   delete _pCharacter;
-    delete _pWilfred;
+  delete _pTympanius;
+  delete _pWilfred;
+  delete _pEnemyElster;
+  delete _pFarina;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
     delete _textureShaderProgram;
@@ -73,19 +80,18 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
       _setLightingParameters();
       // Update Character shader references after reload
       _pCharacter->updateShaderReferences(
-        _elsterShaderProgram->getShaderProgramHandle(),
-        _elsterShaderUniformLocations.mvpMatrix,
-        _elsterShaderUniformLocations.normalMatrix,
-        _elsterShaderUniformLocations.modelMatrix,
-        _elsterShaderUniformLocations.materialDiffuse,
-        _elsterShaderUniformLocations.materialSpecular,
-        _elsterShaderUniformLocations.materialShininess
-      );
-        _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
-              _lightingShaderUniformLocations.mvpMatrix,
-              _lightingShaderUniformLocations.normalMatrix,
-              _lightingShaderUniformLocations.materialColor,
-              _lightingShaderUniformLocations.modelMatrix);
+          _elsterShaderProgram->getShaderProgramHandle(),
+          _elsterShaderUniformLocations.mvpMatrix,
+          _elsterShaderUniformLocations.normalMatrix,
+          _elsterShaderUniformLocations.modelMatrix,
+          _elsterShaderUniformLocations.materialDiffuse,
+          _elsterShaderUniformLocations.materialSpecular,
+          _elsterShaderUniformLocations.materialShininess);
+      _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+                              _lightingShaderUniformLocations.mvpMatrix,
+                              _lightingShaderUniformLocations.normalMatrix,
+                              _lightingShaderUniformLocations.materialColor,
+                              _lightingShaderUniformLocations.modelMatrix);
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -95,21 +101,10 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _groundTessShaderProgram->getAttributeLocation("vTexCoord");
       break;
 
-      // case GLFW_KEY_ENTER:
-      // _camToUse++;
-      // if (_camToUse >=3){_camToUse = 0;}
-      // break;
-    case GLFW_KEY_1:
-      // Switch main viewport to arcball camera
-      _cam = _arcBallCam;
-      fprintf(stdout, "[INFO]: Main viewport switched to Arcball Camera\n");
-      break;
-
-    case GLFW_KEY_2:
-      // Switch main viewport to free camera
-      _cam = _freeCam;
-      fprintf(stdout, "[INFO]: Main viewport switched to Free Camera\n");
-      break;
+      // Camera switching delete
+      // TODO: have a disable minimap once created
+      // case GLFW_KEY_1:
+      // case GLFW_KEY_2:
 
     default:
       break; // suppress CLion warning
@@ -129,10 +124,30 @@ void FPEngine::handleCursorPositionEvent(const glm::vec2 currMousePosition) {
   // if mouse hasn't moved in the window, prevent camera from flipping out
   if (_mousePosition.x == MOUSE_UNINITIALIZED) {
     _mousePosition = currMousePosition;
+    return;
   }
 
-  // if the left mouse button is being held down, control main viewport camera
-  if (_leftMouseButtonState == GLFW_PRESS) {
+  // For first-person camera, rotate the character's heading with mouse
+  if (_cam == _firstPersonCam) {
+    // Horizontal mouse movement controls character heading (yaw)
+    float deltaX = (currMousePosition.x - _mousePosition.x) * 0.005f;
+
+    // Turn character left/right based on mouse movement
+    if (!_characterDead) {
+      _pCharacter->turnRight(deltaX * 2.0f);
+    }
+
+    // Vertical mouse movement controls camera pitch
+    float deltaPhi = -(currMousePosition.y - _mousePosition.y) * 0.005f;
+    _cameraPitch += deltaPhi;
+
+    // Clamp pitch to prevent flipping (look straight up to straight down)
+    const float maxPitch = glm::pi<float>() * 0.95f;  // Almost straight up
+    const float minPitch = glm::pi<float>() * 0.05f;  // Almost straight down
+    _cameraPitch = glm::clamp(_cameraPitch, minPitch, maxPitch);
+  }
+  // For other cameras, require left mouse button to be held down
+  else if (_leftMouseButtonState == GLFW_PRESS) {
     // Check if Shift is also pressed for zooming
     if (_keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT]) {
       // zoom based on vertical mouse movement
@@ -276,6 +291,54 @@ void FPEngine::mSetupShaders() {
   _elsterShaderAttributeLocations.vWeights =
       _elsterShaderProgram->getAttributeLocation("vWeights");
 
+  _tympaniusShaderProgram = new CSCI441::ShaderProgram("shaders/tympMP.v.glsl",
+                                                       "shaders/tympMP.f.glsl");
+
+  // Set Uniform Locations
+  _tympaniusShaderUniformLocations.mvpMatrix =
+      _tympaniusShaderProgram->getUniformLocation("mvpMatrix");
+  _tympaniusShaderUniformLocations.normalMatrix =
+      _tympaniusShaderProgram->getUniformLocation("normalMatrix");
+  _tympaniusShaderUniformLocations.modelMatrix =
+      _tympaniusShaderProgram->getUniformLocation("modelMatrix");
+
+  _tympaniusShaderUniformLocations.lightDir =
+      _tympaniusShaderProgram->getUniformLocation("lightDir");
+    _tympaniusShaderUniformLocations.lightPosition =
+      _tympaniusShaderProgram->getUniformLocation("lightPosition");
+    _tympaniusShaderUniformLocations.spotLightPosition =
+        _tympaniusShaderProgram->getUniformLocation("spotLightPosition");
+    _tympaniusShaderUniformLocations.spotLightDirection =
+        _tympaniusShaderProgram->getUniformLocation("spotLightDirection");
+    _tympaniusShaderUniformLocations.spotLightColor =
+        _tympaniusShaderProgram->getUniformLocation("spotLightColor");
+    _tympaniusShaderUniformLocations.pointLightColor =
+        _tympaniusShaderProgram->getUniformLocation("pointLightColor");
+  _tympaniusShaderUniformLocations.lightColor =
+      _tympaniusShaderProgram->getUniformLocation("lightColor");
+  _tympaniusShaderUniformLocations.ambientLightColor =
+      _tympaniusShaderProgram->getUniformLocation("ambientLightColor");
+
+  _tympaniusShaderUniformLocations.cameraPos =
+      _tympaniusShaderProgram->getUniformLocation("cameraPos");
+  _tympaniusShaderUniformLocations.shininessAlpha =
+      _tympaniusShaderProgram->getUniformLocation("shininessAlpha");
+  _tympaniusShaderUniformLocations.materialColor =
+      _tympaniusShaderProgram->getUniformLocation("materialColor");
+
+  _tympaniusShaderUniformLocations.textureMap =
+      _tympaniusShaderProgram->getUniformLocation("textureMap");
+  _tympaniusShaderUniformLocations.isTextured =
+      _tympaniusShaderProgram->getUniformLocation("isTextured");
+
+  // Set Attribute Locations
+  _tympaniusShaderAttributeLocations.vPos =
+      _tympaniusShaderProgram->getAttributeLocation("vPos");
+  _tympaniusShaderAttributeLocations.vNormal =
+      _tympaniusShaderProgram->getAttributeLocation("vNormal");
+  _tympaniusShaderAttributeLocations.texCoord =
+      _tympaniusShaderProgram->getAttributeLocation("vTexPos");
+
   // load tess shader for ground
   _groundTessShaderProgram = new CSCI441::ShaderProgram(
       "shaders/ground.v.glsl", "shaders/ground.tcs.glsl",
@@ -354,15 +417,19 @@ void FPEngine::mSetupShaders() {
 void FPEngine::mSetupTextures() {
   // TODO #09 - load textures
   _texHandles[TEXTURE_ID::GROUND] =
+<<<<<<< HEAD
       _loadAndRegisterTexture("./assets/textures/floor.png");
   _texHandles[TEXTURE_ID::WALL] = 
       _loadAndRegisterTexture("./assets/textures/bricks.png");
+=======
+      _loadAndRegisterTexture("assets/textures/floor.png");
+>>>>>>> main
   _texHandles[TEXTURE_ID::ENEMY] =
-      _loadAndRegisterTexture("./assets/textures/goomba.png");
+      _loadAndRegisterTexture("assets/textures/goomba.png");
   _texHandles[TEXTURE_ID::COIN] =
-      _loadAndRegisterTexture("./assets/textures/coin.png");
+      _loadAndRegisterTexture("assets/textures/coin.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
-      _loadAndRegisterTexture("./assets/textures/sonic_coin.png");
+      _loadAndRegisterTexture("assets/textures/sonic_coin.png");
 }
 
 void FPEngine::mSetupBuffers() {
@@ -445,25 +512,6 @@ void FPEngine::mSetupScene() {
   _arcBallCam->setLookAtPoint(glm::vec3(0.0f, 35.0f, 0.0f));
   _arcBallCam->recomputeOrientation();
 
-  // Create and position the free camera
-  _freeCam = new CSCI441::FreeCam();
-  _freeCam->setPosition(glm::vec3(0.0f, 50.0f, 100.0f));
-  _freeCam->setTheta(glm::pi<float>());
-  _freeCam->setPhi(glm::half_pi<float>());
-  _freeCam->recomputeOrientation();
-
-  // Create and position the first-person camera
-  _firstPersonCam = new CSCI441::FreeCam();
-  _firstPersonCam->setPosition(glm::vec3(0.0f, 6.0f, 5.0f));
-  _firstPersonCam->setTheta(0.0f);
-  _firstPersonCam->setPhi(glm::half_pi<float>());
-  _firstPersonCam->recomputeOrientation();
-
-  // Set the initial active camera to arcball
-  _cam = _arcBallCam;
-
-  _cameraSpeed = glm::vec2(0.25f, 0.02f);
-
   _pSkybox = new Skybox();
 
   _pCharacter = new Character(_elsterShaderProgram->getShaderProgramHandle(),
@@ -474,21 +522,76 @@ void FPEngine::mSetupScene() {
                               _elsterShaderUniformLocations.materialSpecular,
                               _elsterShaderUniformLocations.materialShininess);
 
-  if (!_pCharacter->loadFromFile("./assets/models/heroes/Elster/elster.glb")) {
+  if (!_pCharacter->loadFromFile("assets/models/heroes/Elster/elster.glb")) {
     fprintf(stderr, "Failed to load character model\n");
   }
 
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
+<<<<<<< HEAD
   _pCharacter->setPosition(glm::vec3(15.0f, 36.0f, 0.0f));
+=======
+  _pCharacter->setPosition(glm::vec3(0.0f, _getTerrainHeight(0.0f, 0.0f), 0.0f));
+>>>>>>> main
 
-    _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+  _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
+  _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
+  _pTympanius->setFloorHeight(_getTerrainHeight(_pTympanius->getPosition().x, _pTympanius->getPosition().z)); // Because setPosition also adds the floating height to the position
+
+  // Create and position the first-person camera at character position
+  _firstPersonCam = new CSCI441::FreeCam();
+  const float EYE_HEIGHT = 5.0f;  // Increased height for better first-person view
+  _firstPersonCam->setPosition(glm::vec3(0.0f, 36.0f + EYE_HEIGHT, 0.0f));
+  _firstPersonCam->setTheta(-_pCharacter->getHeading());  // Face same direction as character
+  _firstPersonCam->setPhi(_cameraPitch);  // Use stored pitch (initialized to look horizontally)
+  _firstPersonCam->recomputeOrientation();
+
+  // Set the active camera to first-person (this is now the only camera)
+  _cam = _firstPersonCam;
+
+  _cameraSpeed = glm::vec2(0.25f, 0.02f);
+
+  _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
                           _lightingShaderUniformLocations.mvpMatrix,
                           _lightingShaderUniformLocations.normalMatrix,
                           _lightingShaderUniformLocations.materialColor,
                           _lightingShaderUniformLocations.modelMatrix);
-    _pWilfred->setPosition(glm::vec3(10.0f, 25.0f, 10.0f));
+    _pWilfred->setPosition(glm::vec3(10.0f, _getTerrainHeight(10.0f, 10.0f), 10.0f));
+
+  // enemy Elster
+  _pEnemyElster =
+      new Character(_elsterShaderProgram->getShaderProgramHandle(),
+                    _elsterShaderUniformLocations.mvpMatrix,
+                    _elsterShaderUniformLocations.normalMatrix,
+                    _elsterShaderUniformLocations.modelMatrix,
+                    _elsterShaderUniformLocations.materialDiffuse,
+                    _elsterShaderUniformLocations.materialSpecular,
+                    _elsterShaderUniformLocations.materialShininess);
+
+  // Farina
+  _pFarina = new Farina(_lightingShaderProgram->getShaderProgramHandle(),
+                        _lightingShaderUniformLocations.mvpMatrix,
+                        _lightingShaderUniformLocations.materialColor,
+                        _lightingShaderUniformLocations.normalMatrix,
+                        _lightingShaderUniformLocations.modelMatrix);
+
+  _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
+
+  if (!_pEnemyElster->loadFromFile(
+          "./assets/models/heroes/Elster/elster.glb")) {
+    fprintf(stderr, "Failed to load enemy Elster model\n");
+  }
+
+  // starting pos for enemy elster
+  float elsterStartX = -10.0f;
+  float elsterStartZ = -10.0f;
+  float elsterStartY = _getTerrainHeight(elsterStartX, elsterStartZ) + 1.0f;
+  _pEnemyElster->setPosition(
+      glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
+
+  // enemy elster to use walking animation
+  _pEnemyElster->playAnimation("elsterWalking");
 
   // Set lighting parameters
   _setLightingParameters();
@@ -497,7 +600,7 @@ void FPEngine::mSetupScene() {
   _particleSystem = new ParticleSystem();
 
   // Spawn enemies
-  _spawnEnemies(10); // Spawn 10 enemies
+  _spawnEnemies(0); // Spawn 10 enemies
 
   // Spawn coins at corners
   _spawnCoins();
@@ -506,13 +609,9 @@ void FPEngine::mSetupScene() {
 void FPEngine::_setLightingParameters() {
   // TODO #6: set lighting uniforms
   const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
-  const glm::vec3 spotLightPosition = glm::vec3(1.0f, 7.0f, 1.0f);
+  const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
   const glm::vec3 spotLightDirection =
-      glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f) - spotLightPosition);
-  const glm::vec3 spotLightColor(0.0f, 0.0f, 1.0f);
-  const glm::vec3 pointLightColor(1.0f, 0.0f, 0.0f);
-  const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
-  const glm::vec3 lightColor(1, 0.65, 0.3);
+      glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
   _lightingShaderProgram->useProgram();
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.lightDirection, lightDirection);
@@ -549,6 +648,22 @@ void FPEngine::_setLightingParameters() {
   _elsterShaderProgram->setProgramUniform(
       _elsterShaderUniformLocations.ambientLight, ambientLightColor);
 
+  // Tympanius lighting
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightDir, lightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightPosition, lightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightColor, lightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightColor, spotLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
+
   // set lighting for ground tess shader
   _groundTessShaderProgram->useProgram();
   _groundTessShaderProgram->setProgramUniform(
@@ -565,6 +680,8 @@ void FPEngine::_setLightingParameters() {
       _groundTessShaderUniformLocations.spotLightColor, spotLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor, pointLightColor);
+
+  
 }
 
 //*************************************************************************************
@@ -594,8 +711,8 @@ void FPEngine::mCleanupBuffers() {
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
 
-    delete _pWilfred;
-_pWilfred = nullptr;
+  delete _pWilfred;
+  _pWilfred = nullptr;
 }
 
 void FPEngine::mCleanupScene() {
@@ -785,26 +902,25 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // Set lighting uniforms
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightDirection,
-      glm::vec3(-1.0f, 0.1f, -0.2f));
+      lightDirection);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightColor,
-      glm::vec3(1.0f, 0.65f, 0.3f));
+      lightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightPosition,
       glm::vec3(1.0f, 0.0f, 1.0f));
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor,
-      glm::vec3(1.0f, 0.0f, 0.0f));
+      pointLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightPosition,
-      glm::vec3(1.0f, 7.0f, 1.0f));
+      _firstPersonCam->getPosition());
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightDirection,
-      glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f) -
-                     glm::vec3(1.0f, 7.0f, 1.0f)));
+      glm::normalize(_firstPersonCam->getLookAtPoint() - _firstPersonCam->getPosition()));
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightColor,
-      glm::vec3(0.0f, 0.0f, 1.0f));
+      spotLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.cameraPosition, cameraPos);
 
@@ -824,24 +940,24 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _elsterShaderProgram->setProgramUniform(
       _elsterShaderUniformLocations.cameraPosition, cameraPos);
 
-  // draw character (only if you didn't get murdered by goombas, or fell to your
-  // tragic death)
-  if (!_characterDead) {
+  // In first-person view no need for the chraracter to get rendered
+  // TODO: set up the hands :o
+  if (!_characterDead && _cam != _firstPersonCam) {
     glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
     _pCharacter->draw(glm::mat4(1.0f), viewMtx, projMtx);
   }
+
+  // draw enemy Elster
+  glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
+  _pEnemyElster->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
   // lighting shader
   _lightingShaderProgram->useProgram();
 
   const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
-  const glm::vec3 spotLightPosition = glm::vec3(1.0f, 7.0f, 1.0f);
-  const glm::vec3 spotLightDirection =
-      glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f) - spotLightPosition);
-  const glm::vec3 spotLightColor(0.0f, 0.0f, 1.0f);
-  const glm::vec3 pointLightColor(1.0f, 0.0f, 0.0f);
-  const glm::vec3 lightDirection(-1.0f, 0.1f, -0.2f);
-  const glm::vec3 lightColor(1.0f, 0.65f, 0.3f);
+    const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
+    const glm::vec3 spotLightDirection =
+        glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
 
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.lightDirection, lightDirection);
@@ -860,12 +976,13 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.cameraPosition, cameraPos);
 
-    /// OLD MAN TIME
-    glm::mat4 wilfredModelMtx(1.0f);
-    _pWilfred->_animateBro(); // get this man an animation
-    _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
-    /// OLD MAN NO MORE
+  /// OLD MAN TIME
+  glm::mat4 wilfredModelMtx(1.0f);
+  _pWilfred->_animateBro(); // get this man an animation
+  _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
+  /// OLD MAN NO MORE
 
+<<<<<<< HEAD
     _textureShaderProgram->useProgram();
   
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
@@ -873,6 +990,12 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
   for (const auto& bush : _bushes) {
+=======
+  // Farina
+  _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
+
+  for (const auto &bush : _bushes) {
+>>>>>>> main
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
     bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2.0f, bush.size));
       glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
@@ -883,6 +1006,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
       CSCI441::drawSolidCubeTextured(2.0f);
   }
+<<<<<<< HEAD
 
   // Draw enemies (only if they also didn't fall tragically to their deaths)
   for (auto enemy : _enemies) { 
@@ -891,8 +1015,29 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                   _spriteShaderUniformLocations.mvpMatrix,
                   _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
                   _texHandles[TEXTURE_ID::ENEMY]);
+=======
+  
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightDir, lightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightPosition, lightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightColor, lightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightColor, spotLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.cameraPos, cameraPos);
+  
+    if (_pTympanius->isAlive()) { 
+      _pTympanius->draw(glm::mat4(1.0f), viewMtx, projMtx);
+>>>>>>> main
     }
-  }
 
   // coins
   for (auto coin : _coins) {
@@ -921,38 +1066,12 @@ void FPEngine::_updateScene() {
 
   bool moved = false;
 
-  // Handle free camera controls if active (only if player is alive)
-  if (_cam == _freeCam && !_characterDead) {
-    // Move forward/backward with space
-    if (_keys[GLFW_KEY_SPACE]) {
-      if (_keys[GLFW_KEY_LEFT_SHIFT] || _keys[GLFW_KEY_RIGHT_SHIFT]) {
-        _freeCam->moveBackward(_cameraSpeed.x);
-      } else {
-        _freeCam->moveForward(_cameraSpeed.x);
-      }
-    }
-    // Turn left/right
-    if (_keys[GLFW_KEY_D]) {
-      _freeCam->rotate(_cameraSpeed.y, 0.0f);
-    }
-    if (_keys[GLFW_KEY_A]) {
-      _freeCam->rotate(-_cameraSpeed.y, 0.0f);
-    }
-    // Pitch up/down
-    if (_keys[GLFW_KEY_W]) {
-      _freeCam->rotate(0.0f, _cameraSpeed.y);
-    }
-    if (_keys[GLFW_KEY_S]) {
-      _freeCam->rotate(0.0f, -_cameraSpeed.y);
-    }
-  }
-
-  // Handle character movement (only if not in free cam mode and player is
-  // alive)
-  if (_cam != _freeCam && !_characterDead) {
+  // Handle character movement (player is alive)
+  if (!_characterDead) {
     // animation management
     static bool isWalking = false;
 
+    // Forward/backward movement
     if (_keys[GLFW_KEY_W]) {
       _pCharacter->moveForward(_characterMoveSpeed * deltaTime);
       moved = true;
@@ -961,11 +1080,31 @@ void FPEngine::_updateScene() {
       _pCharacter->moveBackward(_characterMoveSpeed * deltaTime);
       moved = true;
     }
-    if (_keys[GLFW_KEY_A]) {
-      _pCharacter->turnLeft(_characterTurnSpeed * deltaTime);
-    }
-    if (_keys[GLFW_KEY_D]) {
-      _pCharacter->turnRight(_characterTurnSpeed * deltaTime);
+
+    if (_cam == _firstPersonCam) {
+      glm::vec3 charPos = _pCharacter->getPosition();
+      float heading = _pCharacter->getHeading();
+
+      if (_keys[GLFW_KEY_A]) {
+        glm::vec3 strafeDir(-cos(heading), 0.0f, sin(heading));
+        charPos += strafeDir * _characterMoveSpeed * deltaTime;
+        _pCharacter->setPosition(charPos);
+        moved = true;
+      }
+      if (_keys[GLFW_KEY_D]) {
+        glm::vec3 strafeDir(cos(heading), 0.0f, -sin(heading));
+        charPos += strafeDir * _characterMoveSpeed * deltaTime;
+        _pCharacter->setPosition(charPos);
+        moved = true;
+      }
+    } else {
+      // In other camera modes, A and D turn the character
+      if (_keys[GLFW_KEY_A]) {
+        _pCharacter->turnLeft(_characterTurnSpeed * deltaTime);
+      }
+      if (_keys[GLFW_KEY_D]) {
+        _pCharacter->turnRight(_characterTurnSpeed * deltaTime);
+      }
     }
 
     // Handle jumping with spacebar
@@ -1057,21 +1196,6 @@ void FPEngine::_updateScene() {
 
     // update character position
     _pCharacter->setPosition(charPos);
-
-    // Update first-person camera to follow character and look in character's
-    // direction
-    float heading = _pCharacter->getHeading();
-    glm::vec3 forward = glm::vec3(sinf(heading), 0.0f, cosf(heading));
-    glm::vec3 headPos = _pCharacter->getPosition() +
-                        glm::vec3(0.0f, 5.0f, 0.0f); // Lower camera height
-    glm::vec3 cameraPos =
-        headPos + forward * 1.0f; // Offset forward in front of character
-    _firstPersonCam->setPosition(cameraPos);
-    _firstPersonCam->setTheta(glm::pi<float>() -
-                              heading); // Set heading to match character
-                                        // direction (mirror and reverse)
-    _firstPersonCam->setPhi(glm::half_pi<float>()); // Look horizontally
-    _firstPersonCam->recomputeOrientation();
   }
 
   // Update character animations
@@ -1080,6 +1204,7 @@ void FPEngine::_updateScene() {
   // update enemies
   const float enemyTurnSpeed = 1.5f; // Radians per second
 
+<<<<<<< HEAD
     _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
     glm::vec3 wilfPos = _pWilfred->getPosition();
     glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
@@ -1096,6 +1221,42 @@ void FPEngine::_updateScene() {
         newwilfPos.y = terrainHeight + 1.0f + 3.0f;
         _pWilfred->setPosition(newwilfPos);
     }
+=======
+  // update enemy tympanius
+  _pTympanius->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 tympaniusPos = _pTympanius->getPosition();
+  glm::vec3 newTympaniusPos = _checkAndResolveCollisions(tympaniusPos, _pTympanius->getRadius());
+  _pTympanius->setPosition(newTympaniusPos);
+
+    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+    glm::vec3 wilfPos = _pWilfred->getPosition();
+    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+    _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
+
+  // update enemy elster
+  _pEnemyElster->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 elsterPos = _pEnemyElster->getPosition();
+  float elsterTerrainHeight =
+      _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
+  glm::vec3 newElsterPos = _checkAndResolveCollisions(
+      glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
+  _pEnemyElster->setPosition(
+      glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
+
+  // Farina
+  _pFarina->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+
+  // Terrain Collision / Gravity Resolution
+  glm::vec3 farinaPos = _pFarina->getPosition();
+  float terrainHeight = _getTerrainHeight(farinaPos.x, farinaPos.z);
+
+  // Simple collision: Keep on the ground
+  glm::vec3 newFarinaPos = _checkAndResolveCollisions(
+      glm::vec3(farinaPos.x, terrainHeight + 1.0f, farinaPos.z),
+      _pFarina->getRadius());
+
+  _pFarina->setPosition(newFarinaPos);
+>>>>>>> main
 
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
@@ -1145,11 +1306,46 @@ void FPEngine::_updateScene() {
   _checkPlayerEnemyCollision();
   _checkCoinCollection();
 
-  // Update arcball camera to follow character
+  // Update camera to follow character
   if (_cam == _arcBallCam) {
     _arcBallCam->setLookAtPoint(_pCharacter->getPosition() +
                                 glm::vec3(0.0f, 5.0f, 0.0f));
     _arcBallCam->recomputeOrientation();
+  } else if (_cam == _firstPersonCam) {
+    const float EYE_HEIGHT = 5.0f; // TODO: find a better height i just placed it
+    glm::vec3 characterPos = _pCharacter->getPosition();
+    glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
+
+    // update camera position to match character
+    _firstPersonCam->setPosition(cameraPos);
+
+    // Camera should look in the direction the character is facing
+    float characterHeading = _pCharacter->getHeading();
+    _firstPersonCam->setTheta(-characterHeading);
+    _firstPersonCam->setPhi(_cameraPitch);
+
+    _firstPersonCam->recomputeOrientation();
+      const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
+      const glm::vec3 spotLightDirection =
+          glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
+      _lightingShaderProgram->useProgram();
+  _lightingShaderProgram->setProgramUniform(
+      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _lightingShaderProgram->setProgramUniform(
+      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
+
+  _elsterShaderProgram->useProgram();
+  _elsterShaderProgram->setProgramUniform(
+      _elsterShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _elsterShaderProgram->setProgramUniform(
+      _elsterShaderUniformLocations.spotLightDirection, spotLightDirection);
+
+  // set lighting for ground tess shader
+  _groundTessShaderProgram->useProgram();
+  _groundTessShaderProgram->setProgramUniform(
+      _groundTessShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _groundTessShaderProgram->setProgramUniform(
+      _groundTessShaderUniformLocations.spotLightDirection, spotLightDirection);
   }
 }
 
@@ -1193,25 +1389,6 @@ void FPEngine::run() {
     _renderScene(_cam->getViewMatrix(), mainProjectionMatrix,
                  _cam->getPosition());
 
-    // Clear depth buffer for PiP viewport
-    glClear(GL_DEPTH_BUFFER_BIT);
-
-    // Picture-in-picture viewport dimensions
-    GLint pipWidth = framebufferWidth / 4;
-    GLint pipHeight = framebufferHeight / 4;
-    GLint pipX = 10;
-    GLint pipY = 10;
-
-    float pipAspectRatio =
-        static_cast<float>(pipWidth) / static_cast<float>(pipHeight);
-    glm::mat4 pipProjectionMatrix =
-        glm::perspective(45.0f, pipAspectRatio, 0.1f, 1000.0f);
-
-    // render first person camera view
-    glViewport(pipX, pipY, pipWidth, pipHeight);
-    _renderScene(_firstPersonCam->getViewMatrix(), pipProjectionMatrix,
-                 _firstPersonCam->getPosition());
-
     _updateScene();
 
     glfwSwapBuffers(
@@ -1248,93 +1425,9 @@ float FPEngine::_getTerrainHeight(float x, float z) const {
     return -1000.0f; // Return very low height if out of bounds (for falling)
   }
 
-  // Convert world coordinates to normalized UV coordinates [0, 1]
-  float u = (x + WORLD_SIZE) / (2.0f * WORLD_SIZE);
-  float v = (z + WORLD_SIZE) / (2.0f * WORLD_SIZE);
-
-  // Clamp to [0, 1] just in case
-  u = glm::clamp(u, 0.0f, 1.0f);
-  v = glm::clamp(v, 0.0f, 1.0f);
-
   // Hill height parameter (matching shader)
   const float hillHeight = 56.25f;
-
-  // Corner positions of the patch (matching the ground buffer)
-  glm::vec3 p00(-WORLD_SIZE, 0.0f, -WORLD_SIZE);
-  glm::vec3 p10(WORLD_SIZE, 0.0f, -WORLD_SIZE);
-  glm::vec3 p01(-WORLD_SIZE, 0.0f, WORLD_SIZE);
-  glm::vec3 p11(WORLD_SIZE, 0.0f, WORLD_SIZE);
-
-  // Bezier blending functions (matching shader)
-  auto B0 = [](float t) { return (1.0f - t) * (1.0f - t) * (1.0f - t); };
-  auto B1 = [](float t) { return 3.0f * t * (1.0f - t) * (1.0f - t); };
-  auto B2 = [](float t) { return 3.0f * t * t * (1.0f - t); };
-  auto B3 = [](float t) { return t * t * t; };
-
-  // Get control point function (matching shader logic)
-  auto getControlPoint = [&](int i, int j) -> glm::vec3 {
-    // Row 0 (bottom edge - low height)
-    if (i == 0 && j == 0)
-      return p00;
-    if (i == 0 && j == 1)
-      return glm::mix(p00, p10, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 0 && j == 2)
-      return glm::mix(p00, p10, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 0 && j == 3)
-      return p10;
-
-    // Row 1 (first interior row - medium height)
-    if (i == 1 && j == 0)
-      return glm::mix(p00, p01, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 1 && j == 1)
-      return glm::mix(glm::mix(p00, p10, 0.333f), glm::mix(p01, p11, 0.333f),
-                      0.333f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 1 && j == 2)
-      return glm::mix(glm::mix(p00, p10, 0.667f), glm::mix(p01, p11, 0.667f),
-                      0.333f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 1 && j == 3)
-      return glm::mix(p10, p11, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-
-    // Row 2 (second interior row - medium height)
-    if (i == 2 && j == 0)
-      return glm::mix(p00, p01, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 2 && j == 1)
-      return glm::mix(glm::mix(p00, p10, 0.333f), glm::mix(p01, p11, 0.333f),
-                      0.667f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 2 && j == 2)
-      return glm::mix(glm::mix(p00, p10, 0.667f), glm::mix(p01, p11, 0.667f),
-                      0.667f) +
-             glm::vec3(0, hillHeight * 0.6f, 0);
-    if (i == 2 && j == 3)
-      return glm::mix(p10, p11, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-
-    // Row 3 (top edge - low height)
-    if (i == 3 && j == 0)
-      return p01;
-    if (i == 3 && j == 1)
-      return glm::mix(p01, p11, 0.333f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 3 && j == 2)
-      return glm::mix(p01, p11, 0.667f) + glm::vec3(0, hillHeight * 0.1f, 0);
-    if (i == 3 && j == 3)
-      return p11;
-
-    return glm::vec3(0.0f);
-  };
-
-  // Compute position using bicubic Bezier interpolation
-  glm::vec3 pos(0.0f);
-  for (int i = 0; i < 4; i++) {
-    float bu = (i == 0) ? B0(u) : (i == 1) ? B1(u) : (i == 2) ? B2(u) : B3(u);
-    for (int j = 0; j < 4; j++) {
-      float bv = (j == 0) ? B0(v) : (j == 1) ? B1(v) : (j == 2) ? B2(v) : B3(v);
-      pos += getControlPoint(i, j) * bu * bv;
-    }
-  }
-
-  return pos.y;
+  return hillHeight;
 }
 
 glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
@@ -1464,7 +1557,8 @@ void FPEngine::_spawnEnemies(int numEnemies) {
     // rand heading
     float heading = getRand() * 2.0f * M_PI;
 
-    Enemy *enemy = new Enemy(glm::vec3(x, y, z), heading);
+    Tympanius *enemy = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
+
     _enemies.push_back(enemy);
   }
 
@@ -1532,6 +1626,66 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   glm::vec3 playerPos = _pCharacter->getPosition();
   const float playerRadius = 0.5f;
+  const float maxVerticalDistance = 2.0f;
+
+  // Check collision with Tympanius
+  glm::vec3 tympaniusPos = _pTympanius->getPosition();
+  float tympaniusDistance = glm::length(glm::vec2(playerPos.x - tympaniusPos.x, playerPos.z - tympaniusPos.z));
+  float tympaniusMinDistance = playerRadius + _pTympanius->getRadius(); // Tympanius's radius
+  float tympaniusVerticalDistance = abs(playerPos.y - tympaniusPos.y);
+
+  if (tympaniusDistance < tympaniusMinDistance &&
+      tympaniusVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by Tympanius! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
+  // Check collision with Wilfred
+  glm::vec3 wilfredPos = _pWilfred->getPosition();
+  float wilfredDistance = glm::length(
+      glm::vec2(playerPos.x - wilfredPos.x, playerPos.z - wilfredPos.z));
+  float wilfredMinDistance = playerRadius + _pWilfred->getRadius();
+  float wilfredVerticalDistance = abs(playerPos.y - wilfredPos.y);
+
+  if (wilfredDistance < wilfredMinDistance &&
+      wilfredVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
+  // Check collision with enemy Elster
+  glm::vec3 elsterPos = _pEnemyElster->getPosition();
+  float elsterDistance = glm::length(
+      glm::vec2(playerPos.x - elsterPos.x, playerPos.z - elsterPos.z));
+  float elsterMinDistance = playerRadius + 0.5f; // Elster's radius
+  float elsterVerticalDistance = abs(playerPos.y - elsterPos.y);
+
+  if (elsterDistance < elsterMinDistance &&
+      elsterVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
+  glm::vec3 farinaPos = _pFarina->getPosition();
+  float farinaDist = glm::length(
+      glm::vec2(playerPos.x - farinaPos.x, playerPos.z - farinaPos.z));
+  float farinaMinDist = playerRadius + _pFarina->getRadius();
+  float farinaVertDist = abs(playerPos.y - farinaPos.y);
+
+  if (farinaDist < farinaMinDist && farinaVertDist < 2.0f) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    return;
+  }
 
   for (auto enemy : _enemies) {
     if (!enemy->isAlive() || enemy->isFalling())
@@ -1546,8 +1700,6 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
     // player must be at roughly same height as enemy
     float verticalDistance = abs(playerPos.y - enemyPos.y);
-    const float maxVerticalDistance =
-        2.0f; // Player safe if more than 2 units above/below enemy
 
     if (distance < minDistance && verticalDistance < maxVerticalDistance) {
       // player die </3 rip

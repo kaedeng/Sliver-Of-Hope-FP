@@ -33,6 +33,8 @@ FPEngine::~FPEngine() {
   delete _firstPersonCam;
   delete _pCharacter;
   delete _pTympanius;
+    delete _pWilfred;
+  delete _pEnemyElster;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
   delete _pSkybox;
@@ -67,13 +69,19 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
       _setLightingParameters();
       // Update Character shader references after reload
       _pCharacter->updateShaderReferences(
-          _elsterShaderProgram->getShaderProgramHandle(),
-          _elsterShaderUniformLocations.mvpMatrix,
-          _elsterShaderUniformLocations.normalMatrix,
-          _elsterShaderUniformLocations.modelMatrix,
-          _elsterShaderUniformLocations.materialDiffuse,
-          _elsterShaderUniformLocations.materialSpecular,
-          _elsterShaderUniformLocations.materialShininess);
+        _elsterShaderProgram->getShaderProgramHandle(),
+        _elsterShaderUniformLocations.mvpMatrix,
+        _elsterShaderUniformLocations.normalMatrix,
+        _elsterShaderUniformLocations.modelMatrix,
+        _elsterShaderUniformLocations.materialDiffuse,
+        _elsterShaderUniformLocations.materialSpecular,
+        _elsterShaderUniformLocations.materialShininess
+      );
+        _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+              _lightingShaderUniformLocations.mvpMatrix,
+              _lightingShaderUniformLocations.normalMatrix,
+              _lightingShaderUniformLocations.materialColor,
+              _lightingShaderUniformLocations.modelMatrix);
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -494,11 +502,40 @@ void FPEngine::mSetupScene() {
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
-  _pCharacter->setPosition(glm::vec3(0.0f, 36.0f, 0.0f));
+  _pCharacter->setPosition(glm::vec3(0.0f, _getTerrainHeight(0.0f, 0.0f), 0.0f));
 
   _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
   _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
   _pTympanius->setFloorHeight(_getTerrainHeight(_pTympanius->getPosition().x, _pTympanius->getPosition().z)); // Because setPosition also adds the floating height to the position
+
+    _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+                          _lightingShaderUniformLocations.mvpMatrix,
+                          _lightingShaderUniformLocations.normalMatrix,
+                          _lightingShaderUniformLocations.materialColor,
+                          _lightingShaderUniformLocations.modelMatrix);
+    _pWilfred->setPosition(glm::vec3(10.0f, _getTerrainHeight(10.0f, 10.0f), 10.0f));
+
+  // enemy Elster
+  _pEnemyElster = new Character(_elsterShaderProgram->getShaderProgramHandle(),
+                                _elsterShaderUniformLocations.mvpMatrix,
+                                _elsterShaderUniformLocations.normalMatrix,
+                                _elsterShaderUniformLocations.modelMatrix,
+                                _elsterShaderUniformLocations.materialDiffuse,
+                                _elsterShaderUniformLocations.materialSpecular,
+                                _elsterShaderUniformLocations.materialShininess);
+
+  if (!_pEnemyElster->loadFromFile("./assets/models/heroes/Elster/elster.glb")) {
+    fprintf(stderr, "Failed to load enemy Elster model\n");
+  }
+
+  // starting pos for enemy elster
+  float elsterStartX = -10.0f;
+  float elsterStartZ = -10.0f;
+  float elsterStartY = _getTerrainHeight(elsterStartX, elsterStartZ) + 1.0f;
+  _pEnemyElster->setPosition(glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
+
+  // enemy elster to use walking animation
+  _pEnemyElster->playAnimation("elsterWalking");
 
   // Set lighting parameters
   _setLightingParameters();
@@ -619,6 +656,9 @@ void FPEngine::mCleanupBuffers() {
 
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
+
+    delete _pWilfred;
+_pWilfred = nullptr;
 }
 
 void FPEngine::mCleanupScene() {
@@ -817,6 +857,10 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     _pCharacter->draw(glm::mat4(1.0f), viewMtx, projMtx);
   }
 
+  // draw enemy Elster
+  glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
+  _pEnemyElster->draw(glm::mat4(1.0f), viewMtx, projMtx);
+
   // lighting shader
   _lightingShaderProgram->useProgram();
 
@@ -846,7 +890,13 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.cameraPosition, cameraPos);
 
-  for (const auto &bush : _bushes) {
+    /// OLD MAN TIME
+    glm::mat4 wilfredModelMtx(1.0f);
+    _pWilfred->_animateBro(); // get this man an animation
+    _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
+    /// OLD MAN NO MORE
+
+  for (const auto& bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
     bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size));
 
@@ -1068,6 +1118,18 @@ void FPEngine::_updateScene() {
   glm::vec3 tympaniusPos = _pTympanius->getPosition();
   glm::vec3 newTympaniusPos = _checkAndResolveCollisions(tympaniusPos, _pTympanius->getRadius());
   _pTympanius->setPosition(newTympaniusPos);
+
+    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+    glm::vec3 wilfPos = _pWilfred->getPosition();
+    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+    _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
+
+  // update enemy elster
+  _pEnemyElster->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 elsterPos = _pEnemyElster->getPosition();
+  float elsterTerrainHeight = _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
+  glm::vec3 newElsterPos = _checkAndResolveCollisions(glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
+  _pEnemyElster->setPosition(glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
 
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
@@ -1439,6 +1501,36 @@ void FPEngine::_checkPlayerEnemyCollision() {
     return;
   }
 
+  // Check collision with Wilfred
+  glm::vec3 wilfredPos = _pWilfred->getPosition();
+  float wilfredDistance = glm::length(
+      glm::vec2(playerPos.x - wilfredPos.x, playerPos.z - wilfredPos.z));
+  float wilfredMinDistance = playerRadius + _pWilfred->getRadius();
+  float wilfredVerticalDistance = abs(playerPos.y - wilfredPos.y);
+
+  if (wilfredDistance < wilfredMinDistance && wilfredVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
+  // Check collision with enemy Elster
+  glm::vec3 elsterPos = _pEnemyElster->getPosition();
+  float elsterDistance = glm::length(
+      glm::vec2(playerPos.x - elsterPos.x, playerPos.z - elsterPos.z));
+  float elsterMinDistance = playerRadius + 0.5f; // Elster's radius
+  float elsterVerticalDistance = abs(playerPos.y - elsterPos.y);
+
+  if (elsterDistance < elsterMinDistance && elsterVerticalDistance < maxVerticalDistance) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
+    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
   for (auto enemy : _enemies) {
     if (!enemy->isAlive() || enemy->isFalling())
       continue;
@@ -1452,8 +1544,6 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
     // player must be at roughly same height as enemy
     float verticalDistance = abs(playerPos.y - enemyPos.y);
-    const float maxVerticalDistance =
-        2.0f; // Player safe if more than 2 units above/below enemy
 
     if (distance < minDistance && verticalDistance < maxVerticalDistance) {
       // player die </3 rip

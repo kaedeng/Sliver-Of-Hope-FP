@@ -14,6 +14,9 @@
 #include "TympaniusShaderAttributeLocations.hpp"
 #include "TympaniusShaderUniformLocations.hpp"
 #include "ParticleSystem.h"
+#include "Wilfred.h"
+
+#include <vector>
 #include "Skybox.h"
 
 #include <vector>
@@ -106,6 +109,8 @@ private:
   Character *_pCharacter;
   Tympanius *_pTympanius;
 
+    Wilfred *_pWilfred;
+  Character *_pEnemyElster;
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;

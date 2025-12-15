@@ -83,14 +83,16 @@ private:
   enum TEXTURE_ID {
     /// \desc ground texture
     GROUND = 0,
+    /// wall texture
+    WALL = 1,
     // enemy texture
-    ENEMY = 1,
+    ENEMY = 2,
     // coin texture
-    COIN = 2,
+    COIN = 3,
     // particle texture
-    PARTICLE = 3,
+    PARTICLE = 4,
     // Hands texture
-    PLAYER = 4,
+    PLAYER = 5,
   };
   /// \desc texture handles for our textures
   GLuint _texHandles[NUM_TEXTURES] = {0};

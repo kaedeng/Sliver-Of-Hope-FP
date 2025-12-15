@@ -2,19 +2,16 @@
 
 // uniform inputs
 // TODO #E - add uniform
-uniform sampler2D texMap;
-
+uniform sampler2D textureMap;
 // varying inputs
 // TODO #D - add varying
-layout(location = 2) in vec2 fragTex;
-
+in vec2 texPos;
 // fragment outputs
 out vec4 fragColorOut;
 
 void main() {
     // TODO #F - get texel
-    vec4 theTexel = texture(texMap, fragTex);
-
+    vec4 texelColor = texture(textureMap, texPos);
     // TODO #G - set texel
-    fragColorOut = vec4(fragTex,0.0,1.0);
+    fragColorOut = texelColor;
 }

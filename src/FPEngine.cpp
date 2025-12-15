@@ -18,7 +18,8 @@ FPEngine::FPEngine()
       _leftMouseButtonState(GLFW_RELEASE), _cam(nullptr),
       _cameraSpeed({0.0f, 0.0f}), _groundVAO(0), _numGroundPoints(0),
       _lightingShaderProgram(nullptr),
-_textureShaderProgram(nullptr),
+    _spriteShaderProgram(nullptr), 
+    _spriteShaderUniformLocations( {-1, -1} ),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
       _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
@@ -343,7 +344,9 @@ void FPEngine::mSetupShaders() {
 void FPEngine::mSetupTextures() {
   // TODO #09 - load textures
   _texHandles[TEXTURE_ID::GROUND] =
-      _loadAndRegisterTexture("./assets/textures/ground.jpg");
+      _loadAndRegisterTexture("./assets/textures/floor.png");
+  _texHandles[TEXTURE_ID::WALL] = 
+      _loadAndRegisterTexture("./assets/textures/bricks.png");
   _texHandles[TEXTURE_ID::ENEMY] =
       _loadAndRegisterTexture("./assets/textures/goomba.png");
   _texHandles[TEXTURE_ID::COIN] =
@@ -796,7 +799,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       _groundTessShaderUniformLocations.cameraPosition, cameraPos);
 
   // Bind ground texture
-  glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::GROUND]);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.groundTexture, 0);
@@ -854,25 +856,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
     /// OLD MAN NO MORE
 
-    _textureShaderProgram->useProgram();
-glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::COIN]);
+    _spriteShaderProgram->useProgram();
 
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    //
-    // // IMPORTANT
-    // glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
   for (const auto& bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2, bush.size));
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size, bush.size));
       glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
 
-    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
+    _spriteShaderProgram->setProgramUniform(_spriteShaderUniformLocations.mvpMatrix, TmvpMtx);
     //_lightingShaderProgram->setProgramUniform(
         //_lightingShaderUniformLocations.materialColor, bush.color);
 
@@ -880,7 +873,7 @@ glActiveTexture(GL_TEXTURE0);
   }
 
   // Draw enemies (only if they also didn't fall tragically to their deaths)
-  for (auto enemy : _enemies) {
+  for (auto enemy : _enemies) { 
     if (enemy->isAlive()) {
       enemy->draw(_spriteShaderProgram->getShaderProgramHandle(),
                   _spriteShaderUniformLocations.mvpMatrix,
@@ -1415,15 +1408,14 @@ GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
     glBindTexture(GL_TEXTURE_2D, textureHandle);
     // set texture parameters
     // TODO #03 - mag filter
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     // TODO #04 - min filter
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     // TODO #05 - wrap s
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     // TODO #06 - wrap t
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // TODO #07 - transfer image data to the GPU
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0,
                  STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
 

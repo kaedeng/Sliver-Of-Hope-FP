@@ -18,6 +18,7 @@ FPEngine::FPEngine()
       _lightingShaderProgram(nullptr),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
       _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
+      _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
       _characterDead(false), _particleSystem(nullptr), _coinsCollected(0) {
@@ -30,8 +31,9 @@ FPEngine::~FPEngine() {
   delete _arcBallCam;
   delete _firstPersonCam;
   delete _pCharacter;
-    delete _pWilfred;
+  delete _pWilfred;
   delete _pEnemyElster;
+  delete _pFarina;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
   delete _pSkybox;
@@ -66,19 +68,18 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
       _setLightingParameters();
       // Update Character shader references after reload
       _pCharacter->updateShaderReferences(
-        _elsterShaderProgram->getShaderProgramHandle(),
-        _elsterShaderUniformLocations.mvpMatrix,
-        _elsterShaderUniformLocations.normalMatrix,
-        _elsterShaderUniformLocations.modelMatrix,
-        _elsterShaderUniformLocations.materialDiffuse,
-        _elsterShaderUniformLocations.materialSpecular,
-        _elsterShaderUniformLocations.materialShininess
-      );
-        _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
-              _lightingShaderUniformLocations.mvpMatrix,
-              _lightingShaderUniformLocations.normalMatrix,
-              _lightingShaderUniformLocations.materialColor,
-              _lightingShaderUniformLocations.modelMatrix);
+          _elsterShaderProgram->getShaderProgramHandle(),
+          _elsterShaderUniformLocations.mvpMatrix,
+          _elsterShaderUniformLocations.normalMatrix,
+          _elsterShaderUniformLocations.modelMatrix,
+          _elsterShaderUniformLocations.materialDiffuse,
+          _elsterShaderUniformLocations.materialSpecular,
+          _elsterShaderUniformLocations.materialShininess);
+      _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+                              _lightingShaderUniformLocations.mvpMatrix,
+                              _lightingShaderUniformLocations.normalMatrix,
+                              _lightingShaderUniformLocations.materialColor,
+                              _lightingShaderUniformLocations.modelMatrix);
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -453,23 +454,34 @@ void FPEngine::mSetupScene() {
   // hillHeight)
   _pCharacter->setPosition(glm::vec3(0.0f, 36.0f, 0.0f));
 
-    _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
+  _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
                           _lightingShaderUniformLocations.mvpMatrix,
                           _lightingShaderUniformLocations.normalMatrix,
                           _lightingShaderUniformLocations.materialColor,
                           _lightingShaderUniformLocations.modelMatrix);
-    _pWilfred->setPosition(glm::vec3(10.0f, 25.0f, 10.0f));
+  _pWilfred->setPosition(glm::vec3(10.0f, 25.0f, 10.0f));
 
   // enemy Elster
-  _pEnemyElster = new Character(_elsterShaderProgram->getShaderProgramHandle(),
-                                _elsterShaderUniformLocations.mvpMatrix,
-                                _elsterShaderUniformLocations.normalMatrix,
-                                _elsterShaderUniformLocations.modelMatrix,
-                                _elsterShaderUniformLocations.materialDiffuse,
-                                _elsterShaderUniformLocations.materialSpecular,
-                                _elsterShaderUniformLocations.materialShininess);
+  _pEnemyElster =
+      new Character(_elsterShaderProgram->getShaderProgramHandle(),
+                    _elsterShaderUniformLocations.mvpMatrix,
+                    _elsterShaderUniformLocations.normalMatrix,
+                    _elsterShaderUniformLocations.modelMatrix,
+                    _elsterShaderUniformLocations.materialDiffuse,
+                    _elsterShaderUniformLocations.materialSpecular,
+                    _elsterShaderUniformLocations.materialShininess);
 
-  if (!_pEnemyElster->loadFromFile("./assets/models/heroes/Elster/elster.glb")) {
+  // Farina
+  _pFarina = new Farina(_lightingShaderProgram->getShaderProgramHandle(),
+                        _lightingShaderUniformLocations.mvpMatrix,
+                        _lightingShaderUniformLocations.materialColor,
+                        _lightingShaderUniformLocations.normalMatrix,
+                        _lightingShaderUniformLocations.modelMatrix);
+
+  _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
+
+  if (!_pEnemyElster->loadFromFile(
+          "./assets/models/heroes/Elster/elster.glb")) {
     fprintf(stderr, "Failed to load enemy Elster model\n");
   }
 
@@ -477,7 +489,8 @@ void FPEngine::mSetupScene() {
   float elsterStartX = -10.0f;
   float elsterStartZ = -10.0f;
   float elsterStartY = _getTerrainHeight(elsterStartX, elsterStartZ) + 1.0f;
-  _pEnemyElster->setPosition(glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
+  _pEnemyElster->setPosition(
+      glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
 
   // enemy elster to use walking animation
   _pEnemyElster->playAnimation("elsterWalking");
@@ -584,8 +597,8 @@ void FPEngine::mCleanupBuffers() {
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
 
-    delete _pWilfred;
-_pWilfred = nullptr;
+  delete _pWilfred;
+  _pWilfred = nullptr;
 }
 
 void FPEngine::mCleanupScene() {
@@ -817,13 +830,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _lightingShaderProgram->setProgramUniform(
       _lightingShaderUniformLocations.cameraPosition, cameraPos);
 
-    /// OLD MAN TIME
-    glm::mat4 wilfredModelMtx(1.0f);
-    _pWilfred->_animateBro(); // get this man an animation
-    _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
-    /// OLD MAN NO MORE
+  /// OLD MAN TIME
+  glm::mat4 wilfredModelMtx(1.0f);
+  _pWilfred->_animateBro(); // get this man an animation
+  _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
+  /// OLD MAN NO MORE
 
-  for (const auto& bush : _bushes) {
+  // Farina
+  _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
+
+  for (const auto &bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
     bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size));
 
@@ -1028,17 +1044,37 @@ void FPEngine::_updateScene() {
 
   // update enemies
   const float enemyTurnSpeed = 1.5f; // Radians per second
-    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-    glm::vec3 wilfPos = _pWilfred->getPosition();
-    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
-    _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
+  _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 wilfPos = _pWilfred->getPosition();
+  glm::vec3 newwilfPos = _checkAndResolveCollisions(
+      glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f,
+                wilfPos.z),
+      0.5f);
+  _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
 
   // update enemy elster
   _pEnemyElster->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
   glm::vec3 elsterPos = _pEnemyElster->getPosition();
-  float elsterTerrainHeight = _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
-  glm::vec3 newElsterPos = _checkAndResolveCollisions(glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
-  _pEnemyElster->setPosition(glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
+  float elsterTerrainHeight =
+      _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
+  glm::vec3 newElsterPos = _checkAndResolveCollisions(
+      glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
+  _pEnemyElster->setPosition(
+      glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
+
+  // Farina
+  _pFarina->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+
+  // Terrain Collision / Gravity Resolution
+  glm::vec3 farinaPos = _pFarina->getPosition();
+  float terrainHeight = _getTerrainHeight(farinaPos.x, farinaPos.z);
+
+  // Simple collision: Keep on the ground
+  glm::vec3 newFarinaPos = _checkAndResolveCollisions(
+      glm::vec3(farinaPos.x, terrainHeight + 1.0f, farinaPos.z),
+      _pFarina->getRadius());
+
+  _pFarina->setPosition(newFarinaPos);
 
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {
@@ -1485,7 +1521,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
   float wilfredVerticalDistance = abs(playerPos.y - wilfredPos.y);
   const float maxVerticalDistance = 2.0f;
 
-  if (wilfredDistance < wilfredMinDistance && wilfredVerticalDistance < maxVerticalDistance) {
+  if (wilfredDistance < wilfredMinDistance &&
+      wilfredVerticalDistance < maxVerticalDistance) {
     _characterDead = true;
     _particleSystem->spawnBurst(playerPos, 30);
     fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
@@ -1500,11 +1537,24 @@ void FPEngine::_checkPlayerEnemyCollision() {
   float elsterMinDistance = playerRadius + 0.5f; // Elster's radius
   float elsterVerticalDistance = abs(playerPos.y - elsterPos.y);
 
-  if (elsterDistance < elsterMinDistance && elsterVerticalDistance < maxVerticalDistance) {
+  if (elsterDistance < elsterMinDistance &&
+      elsterVerticalDistance < maxVerticalDistance) {
     _characterDead = true;
     _particleSystem->spawnBurst(playerPos, 30);
     fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
     fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    return;
+  }
+
+  glm::vec3 farinaPos = _pFarina->getPosition();
+  float farinaDist = glm::length(
+      glm::vec2(playerPos.x - farinaPos.x, playerPos.z - farinaPos.z));
+  float farinaMinDist = playerRadius + _pFarina->getRadius();
+  float farinaVertDist = abs(playerPos.y - farinaPos.y);
+
+  if (farinaDist < farinaMinDist && farinaVertDist < 2.0f) {
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
     return;
   }
 

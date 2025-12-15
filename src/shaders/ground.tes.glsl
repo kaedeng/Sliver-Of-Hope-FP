@@ -189,7 +189,7 @@ vec3 computeNormal(float u, float v) {
     vec3 tangentV = bezierCurveDerivative(curve0, curve1, curve2, curve3, v);
 
     // Normal is cross product of tangents
-    return normalize(cross(tangentU, tangentV));
+    return normalize(cross(tangentV, tangentU));
 }
 
 void main() {

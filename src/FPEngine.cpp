@@ -334,12 +334,18 @@ void FPEngine::mSetupShaders() {
     // query uniform locations
     _textureShaderUniformLocations.mvpMatrix      = _textureShaderProgram->getUniformLocation("mvpMatrix");
     // TODO #12A - texture map
-    _textureShaderUniformLocations.texMap      = _textureShaderProgram->getUniformLocation("texMap");
+    _textureShaderUniformLocations.texMap      = _textureShaderProgram->getUniformLocation("textureMap");
 
     // set static uniforms
     // TODO #13 - set uniform
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.texMap, 0);
 
+    _textureShaderAttributeLocations.vPos =
+    _textureShaderProgram->getAttributeLocation("vPos");
+  _textureShaderAttributeLocations.vNormal =
+      _textureShaderProgram->getAttributeLocation("vNormal");
+  _textureShaderAttributeLocations.texCoord =
+      _textureShaderProgram->getAttributeLocation("vTexPos");
 
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
                                          _textureShaderAttributeLocations.texCoord);
@@ -861,11 +867,14 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     /// OLD MAN NO MORE
 
     _textureShaderProgram->useProgram();
+  
+    CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
+
     glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
   for (const auto& bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size, bush.size));
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2.0f, bush.size));
       glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
 
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);

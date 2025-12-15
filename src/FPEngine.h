@@ -10,6 +10,9 @@
 #include "Character.h"
 #include "Coin.h"
 #include "Enemy.h"
+#include "Tympanius.h"
+#include "TympaniusShaderAttributeLocations.hpp"
+#include "TympaniusShaderUniformLocations.hpp"
 #include "Farina.h"
 #include "ParticleSystem.h"
 #include "Wilfred.h"
@@ -106,6 +109,7 @@ private:
   // i have eliminated the other characters, it is only elster left...
   // ^ nuh uh - mari
   Character *_pCharacter;
+  Tympanius *_pTympanius;
   Wilfred *_pWilfred;
   Character *_pEnemyElster;
   Farina *_pFarina;
@@ -124,7 +128,7 @@ private:
   const glm::vec3 lightColor = {0, 0, 0};
 
   // game objects
-  std::vector<Enemy *> _enemies;
+  std::vector<Tympanius *> _enemies;
   std::vector<Coin *> _coins;
   ParticleSystem *_particleSystem;
   int _coinsCollected;
@@ -228,6 +232,13 @@ private:
     GLint vJoints;
     GLint vWeights;
   } _elsterShaderAttributeLocations;
+
+  /// \desc shader program that performs lighting
+    CSCI441::ShaderProgram* _tympaniusShaderProgram ;   // the wrapper for our shader program
+    /// \desc stores the locations of all of our shader uniforms
+    TympaniusShaderUniformLocations _tympaniusShaderUniformLocations;
+    /// \desc stores the locations of all of our shader attributes
+    TympaniusShaderAttributeLocations _tympaniusShaderAttributeLocations;
 
   // tess shaders for ground
   CSCI441::ShaderProgram *_groundTessShaderProgram;

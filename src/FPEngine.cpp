@@ -20,6 +20,9 @@ FPEngine::FPEngine()
       _lightingShaderProgram(nullptr),
     _spriteShaderProgram(nullptr), 
     _spriteShaderUniformLocations( {-1, -1} ),
+    _textureShaderProgram(nullptr),
+    _textureShaderUniformLocations({-1, -1}),
+    _textureShaderAttributeLocations({-1, -1, -1}),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
       _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
@@ -335,10 +338,11 @@ void FPEngine::mSetupShaders() {
 
     // set static uniforms
     // TODO #13 - set uniform
-    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.texMap,0);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.texMap, 0);
+
 
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
-                                         _textureShaderAttributeLocations.vTexCoord);
+                                         _textureShaderAttributeLocations.texCoord);
 }
 
 void FPEngine::mSetupTextures() {
@@ -856,8 +860,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
     /// OLD MAN NO MORE
 
-    _spriteShaderProgram->useProgram();
-
+    _textureShaderProgram->useProgram();
     glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
   for (const auto& bush : _bushes) {
@@ -865,7 +868,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size, bush.size));
       glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
 
-    _spriteShaderProgram->setProgramUniform(_spriteShaderUniformLocations.mvpMatrix, TmvpMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
     //_lightingShaderProgram->setProgramUniform(
         //_lightingShaderUniformLocations.materialColor, bush.color);
 

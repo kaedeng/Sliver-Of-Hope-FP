@@ -208,13 +208,15 @@ private:
 
   } _textureShaderUniformLocations;
   struct TextureShaderAttributeLocations {
-    /// \desc vertex position location
-    GLint vPos;
-    GLint vNormal;
-    // TODO #10 - texture coordinate
-    GLint vTexCoord;
+        /// \desc vertex position location
+        GLint vPos;
+        /// \desc vertex normal location
+        /// \note not used in this lab
+        GLint vNormal;
+        // TODO #10 - texture coordinate
+        GLint texCoord;
 
-  } _textureShaderAttributeLocations;
+    } _textureShaderAttributeLocations;
 
   // Shaders for elster
   CSCI441::ShaderProgram *_elsterShaderProgram;

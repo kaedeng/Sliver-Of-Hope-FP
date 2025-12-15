@@ -1103,7 +1103,7 @@ void FPEngine::_updateScene() {
 
   // Check collisions
   _checkEnemyCollisions();
-  //_checkPlayerEnemyCollision();
+  _checkPlayerEnemyCollision();
   _checkCoinCollection();
 
   // Update camera to follow character

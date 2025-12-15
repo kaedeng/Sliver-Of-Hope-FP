@@ -27,10 +27,13 @@ public:
     void draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
 
     // Returns tympanius's position
-    glm::vec3 getPosition() const { return _position; }
+    glm::vec3 getPosition() const { return glm::vec3(_position.x, _position.y-_floatingHeight, _position.z); }
 
     // Sets tympanius's position
     void setPosition(glm::vec3 position) { _position = glm::vec3(position.x, position.y+_floatingHeight, position.z); }
+
+    // Sets floor height
+    void setFloorHeight(GLfloat floorHeight) { _floorHeight = floorHeight; }
 
     // Returns tympanius's heading
     glm::vec3 getHeading() const { return _heading; }
@@ -66,7 +69,7 @@ public:
     void setAlive(bool alive) { _alive = alive; }
     
     
-    const GLfloat ORIGINAL_SIZE = 10.0f;
+    const GLfloat ORIGINAL_SIZE = 5.0f;
     const short MAX_FALL_COUNT = 5;
     const GLfloat INIT_FLOATING_HEIGHT = 0.75f;
     const GLfloat DAMPING = 0.93f;
@@ -75,12 +78,13 @@ public:
 
 private:
     glm::vec3 _position;
+    GLfloat _floorHeight;
     glm::vec3 _heading;
     GLfloat _size = ORIGINAL_SIZE;
     glm::vec3 _tailHeading;
     GLfloat _floatingHeight;
     GLfloat _moveSpeed = 5.0f;
-    glm::vec3 _velocity;
+    glm::vec3 _velocity = glm::vec3(0.0f);
     GLfloat _lastUpdatedTime = 0.0f;
     bool _falling = false;
     bool _alive = true;

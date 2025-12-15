@@ -6,6 +6,8 @@
 #include <glm/gtc/constants.hpp> // for glm::pi()
 #include <glm/gtc/type_ptr.hpp>  // for glm::value_ptr()
 
+#include <iostream>
+
 //*************************************************************************************
 //
 // Public Interface
@@ -495,7 +497,8 @@ void FPEngine::mSetupScene() {
   _pCharacter->setPosition(glm::vec3(0.0f, 36.0f, 0.0f));
 
   _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
-  _pTympanius->setPosition(glm::vec3(0.0f, _getTerrainHeight(0.0f, 0.0f), 0.0f));
+  _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
+  _pTympanius->setFloorHeight(_getTerrainHeight(_pTympanius->getPosition().x, _pTympanius->getPosition().z)); // Because setPosition also adds the floating height to the position
 
   // Set lighting parameters
   _setLightingParameters();
@@ -556,6 +559,22 @@ void FPEngine::_setLightingParameters() {
   _elsterShaderProgram->setProgramUniform(
       _elsterShaderUniformLocations.ambientLight, ambientLightColor);
 
+  // Tympanius lighting
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightDir, lightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightPosition, lightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightColor, lightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.spotLightColor, spotLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
+
   // set lighting for ground tess shader
   _groundTessShaderProgram->useProgram();
   _groundTessShaderProgram->setProgramUniform(
@@ -572,6 +591,8 @@ void FPEngine::_setLightingParameters() {
       _groundTessShaderUniformLocations.spotLightColor, spotLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor, pointLightColor);
+
+  
 }
 
 //*************************************************************************************
@@ -1045,7 +1066,7 @@ void FPEngine::_updateScene() {
   // update enemy tympanius
   _pTympanius->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
   glm::vec3 tympaniusPos = _pTympanius->getPosition();
-  glm::vec3 newTympaniusPos = _checkAndResolveCollisions(glm::vec3(tympaniusPos.x, _getTerrainHeight(tympaniusPos.x, tympaniusPos.z), tympaniusPos.z), 0.5f);
+  glm::vec3 newTympaniusPos = _checkAndResolveCollisions(tympaniusPos, _pTympanius->getRadius());
   _pTympanius->setPosition(newTympaniusPos);
 
   for (auto enemy : _enemies) {
@@ -1403,10 +1424,10 @@ void FPEngine::_checkPlayerEnemyCollision() {
   const float playerRadius = 0.5f;
   const float maxVerticalDistance = 2.0f;
 
-  // Check collision with enemy Elster
+  // Check collision with Tympanius
   glm::vec3 tympaniusPos = _pTympanius->getPosition();
   float tympaniusDistance = glm::length(glm::vec2(playerPos.x - tympaniusPos.x, playerPos.z - tympaniusPos.z));
-  float tympaniusMinDistance = playerRadius + 0.5f; // Tympanius's radius
+  float tympaniusMinDistance = playerRadius + _pTympanius->getRadius(); // Tympanius's radius
   float tympaniusVerticalDistance = abs(playerPos.y - tympaniusPos.y);
 
   if (tympaniusDistance < tympaniusMinDistance &&

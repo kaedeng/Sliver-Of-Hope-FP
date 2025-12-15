@@ -56,7 +56,7 @@ void Tympanius::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
   _shaderProgram->useProgram();
   // Apply tympanius's base transformations
   // modelMtx becomes the root of our hierarchy
-  modelMtx = glm::translate(modelMtx, _position);
+  modelMtx = glm::translate(modelMtx, glm::vec3(_position.x, _position.y, _position.z));
   modelMtx = glm::rotate(modelMtx, _heading[0], CSCI441::Y_AXIS);
   modelMtx = glm::scale(modelMtx, glm::vec3(_size));
 
@@ -68,7 +68,7 @@ void Tympanius::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
 void Tympanius::update(GLfloat deltaTime, const glm::vec3& heroPosition, float turnSpeed) {
     _lastUpdatedTime += deltaTime;
     // move along heading
-    _position += _heading * _moveSpeed * deltaTime;
+    _position += glm::vec3(sin(_heading[0]), 0, cos(_heading[0])) * _moveSpeed * deltaTime;
 
     // calculate vector from enemy to hero
     glm::vec3 toHero = heroPosition - _position;
@@ -82,10 +82,9 @@ void Tympanius::update(GLfloat deltaTime, const glm::vec3& heroPosition, float t
     _tailHeading[0] = glm::mix(_tailHeading[0], 0.0f, returnSpeed / (deltaTime * 60));
 
     _position += _velocity;
-    _floatingHeight = _position.y;
 
     // Floating animation - oscillate around floating height
-    _position.y = _floatingHeight + 0.025f * sin(_lastUpdatedTime * 60 / 5.0f);
+    _position.y = _floorHeight + _floatingHeight + 0.025f * sin(_lastUpdatedTime * 60 / 5.0f);
 
     if (glm::length(toHero) > 0.01f) {
         glm::vec3 desiredHeading = glm::normalize(toHero);

@@ -794,8 +794,8 @@ void Character::_computeAndSendMatrixUniforms(
 }
 
 void Character::moveForward(float amount) {
-    _position.x += amount * sin(_heading);
-    _position.z += amount * cos(_heading);
+    _position.x -= amount * sin(_heading);
+    _position.z -= amount * cos(_heading);
 }
 
 void Character::moveBackward(float amount) {

@@ -417,13 +417,9 @@ void FPEngine::mSetupShaders() {
 void FPEngine::mSetupTextures() {
   // TODO #09 - load textures
   _texHandles[TEXTURE_ID::GROUND] =
-<<<<<<< HEAD
       _loadAndRegisterTexture("./assets/textures/floor.png");
   _texHandles[TEXTURE_ID::WALL] = 
       _loadAndRegisterTexture("./assets/textures/bricks.png");
-=======
-      _loadAndRegisterTexture("assets/textures/floor.png");
->>>>>>> main
   _texHandles[TEXTURE_ID::ENEMY] =
       _loadAndRegisterTexture("assets/textures/goomba.png");
   _texHandles[TEXTURE_ID::COIN] =
@@ -529,11 +525,7 @@ void FPEngine::mSetupScene() {
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
-<<<<<<< HEAD
-  _pCharacter->setPosition(glm::vec3(15.0f, 36.0f, 0.0f));
-=======
-  _pCharacter->setPosition(glm::vec3(0.0f, _getTerrainHeight(0.0f, 0.0f), 0.0f));
->>>>>>> main
+  _pCharacter->setPosition(glm::vec3(70.0f, _getTerrainHeight(20.0f, 0.0f), 0.0f));
 
   _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
   _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
@@ -982,20 +974,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
   /// OLD MAN NO MORE
 
-<<<<<<< HEAD
+  // Farina
+  _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
+
     _textureShaderProgram->useProgram();
   
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
     glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
-  for (const auto& bush : _bushes) {
-=======
-  // Farina
-  _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
-
   for (const auto &bush : _bushes) {
->>>>>>> main
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
     bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2.0f, bush.size));
       glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
@@ -1006,16 +994,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
       CSCI441::drawSolidCubeTextured(2.0f);
   }
-<<<<<<< HEAD
-
-  // Draw enemies (only if they also didn't fall tragically to their deaths)
-  for (auto enemy : _enemies) { 
-    if (enemy->isAlive()) {
-      enemy->draw(_spriteShaderProgram->getShaderProgramHandle(),
-                  _spriteShaderUniformLocations.mvpMatrix,
-                  _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
-                  _texHandles[TEXTURE_ID::ENEMY]);
-=======
   
   _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.lightDir, lightDirection);
@@ -1036,7 +1014,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   
     if (_pTympanius->isAlive()) { 
       _pTympanius->draw(glm::mat4(1.0f), viewMtx, projMtx);
->>>>>>> main
     }
 
   // coins
@@ -1204,24 +1181,6 @@ void FPEngine::_updateScene() {
   // update enemies
   const float enemyTurnSpeed = 1.5f; // Radians per second
 
-<<<<<<< HEAD
-    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-    glm::vec3 wilfPos = _pWilfred->getPosition();
-    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
-
-    float terrainHeight = _getTerrainHeight(newwilfPos.x, newwilfPos.z);
-
-    if (terrainHeight < -500.0f) {
-        // Enemy is off the edge, start falling and spawn particles
-        _pWilfred->setFalling(true);
-        _particleSystem->spawnBurst(newwilfPos, 15);
-        fprintf(stdout, "[INFO]: Enemy fell off the edge!\n");
-    } else if (!_pWilfred->isFalling()) {
-        // Keep enemy on terrain
-        newwilfPos.y = terrainHeight + 1.0f + 3.0f;
-        _pWilfred->setPosition(newwilfPos);
-    }
-=======
   // update enemy tympanius
   _pTympanius->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
   glm::vec3 tympaniusPos = _pTympanius->getPosition();
@@ -1256,7 +1215,6 @@ void FPEngine::_updateScene() {
       _pFarina->getRadius());
 
   _pFarina->setPosition(newFarinaPos);
->>>>>>> main
 
   for (auto enemy : _enemies) {
     if (enemy->isAlive() && !enemy->isFalling()) {

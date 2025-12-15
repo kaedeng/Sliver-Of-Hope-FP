@@ -3,8 +3,6 @@
 layout(quads, equal_spacing, ccw) in;
 
 in vec3 tePos[];
-// teNormal and teTexCoord are not used for position/normal calculation here
-// We'll keep them in to maintain the original structure
 in vec3 teNormal[];
 in vec2 teTexCoord[];
 
@@ -15,35 +13,17 @@ out vec2 fragTexCoord;
 uniform mat4 mvpMatrix;
 uniform mat4 modelMatrix;
 uniform mat3 normalMatrix;
-uniform float hillHeight = 56.25;
+uniform float hillHeight = 56.25; // Maximum height of the mountain
 
-vec3 bilinearInterpolate(float u, float v) {
+// Bezier interpolation
+vec3 bezierInterpolate(float u, float v) {
+    // 4 corner positions from the patch
     vec3 p00 = tePos[0];
     vec3 p10 = tePos[1];
     vec3 p01 = tePos[2];
     vec3 p11 = tePos[3];
 
-    vec3 p_u0 = mix(p00, p10, u);
-    vec3 p_u1 = mix(p01, p11, u);
-    
-    vec3 p_uv = mix(p_u0, p_u1, v);
-    p_uv.y = max(p_uv.y, hillHeight);
-
-    return p_uv;
-}
-
-vec3 calculateNormal(float u, float v) {
-    float delta = 0.001;
-    
-    vec3 pos_u_plus  = bilinearInterpolate(min(u + delta, 1.0), v);
-    vec3 pos_u_minus = bilinearInterpolate(max(u - delta, 0.0), v);
-    vec3 pos_v_plus  = bilinearInterpolate(u, min(v + delta, 1.0));
-    vec3 pos_v_minus = bilinearInterpolate(u, max(v - delta, 0.0));
-    
-    vec3 tangent_u = pos_u_plus - pos_u_minus;
-    vec3 tangent_v = pos_v_plus - pos_v_minus;
-    
-    return normalize(cross(tangent_v, tangent_u));
+    return vec3(mix(p00.x, p11.x, u), hillHeight, mix(p00.z, p11.z, v));
 }
 
 void main() {
@@ -56,12 +36,12 @@ void main() {
     vec2 texCoord1 = mix(teTexCoord[2], teTexCoord[3], u);
     fragTexCoord = mix(texCoord0, texCoord1, v);
 
-    // position using Bilinear surface
-    vec3 localPos = bilinearInterpolate(u, v);
+    // position using Bezier surface
+    vec3 localPos = bezierInterpolate(u, v);
 
-    // normal from surface calculation
-    vec3 localNormal = calculateNormal(u, v);
-    
+    // normal from surface
+    vec3 localNormal = vec3(0, 1, 0);
+
     // to world space
     worldPos = (modelMatrix * vec4(localPos, 1.0)).xyz;
     fragNormal = normalize(normalMatrix * localNormal);

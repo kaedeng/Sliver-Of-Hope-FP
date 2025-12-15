@@ -71,7 +71,7 @@ void main() {
     float distance = length(spotLightPosition - worldPos);
     float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * (distance * distance));
 
-    vec3 spotColor = (spotDiffuse + spotSpecular) * intensity * attenuation;
+    vec3 spotColor = (spotDiffuse + spotSpecular) * intensity;
 
     // Ambient
     vec3 ambient = vec3(0.3, 0.3, 0.3) * texColor.rgb;

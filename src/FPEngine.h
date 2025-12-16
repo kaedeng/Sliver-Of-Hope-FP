@@ -146,6 +146,10 @@ private:
   /// \desc the number of points that make up our ground object
   GLsizei _numGroundPoints;
 
+  /// \desc FBO for the post processing stuff
+  GLuint _postFBO;
+  GLuint _postTextureID;
+
   /// \desc smart container to store information specific to each tree we wish
   /// to draw
   struct TreeData {
@@ -171,7 +175,12 @@ private:
   };
   std::vector<BushData> _bushes;
 
-  void _createQuad(GLuint VAO, GLuint VBO, GLuint IBO, GLsizei& numVAOPoints) const;
+  GLuint _quadVAO;
+  GLuint _quadVBO;
+  GLuint _quadIBO;
+  GLsizei _numQuadVAOPoints = 0;
+
+  void _createQuad(GLuint VAO, GLuint VBO, GLuint IBO, GLsizei numVAOPoints) const;
 
   /// \desc generates tree information to make up our scene
   void _generateEnvironment();
@@ -280,6 +289,20 @@ private:
     GLint mvpMatrix;
     GLint spriteTexture;
   } _spriteShaderUniformLocations;
+
+  CSCI441::ShaderProgram *_postShaderProgram;
+  struct PostShaderUniformLocations {
+    GLint mvpMatrix;
+    GLint sceneTexture;
+    GLint rOffset;
+    GLint gOffset;
+    GLint bOffset;
+
+  } _postShaderUniformLocations;
+  struct PostShaderAttributeLocations {
+    GLint vPos;
+    GLint texCoord;
+  } _postShaderAttributeLocations;
 
   /// \desc set the lighting parameters to the shader
   void _setLightingParameters();

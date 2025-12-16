@@ -25,6 +25,9 @@ FPEngine::FPEngine()
     _textureShaderProgram(nullptr),
     _textureShaderUniformLocations({-1, -1}),
     _textureShaderAttributeLocations({-1, -1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
+    _postShaderProgram(nullptr),
+    _postShaderUniformLocations({-1, -1}),
+    _postShaderAttributeLocations({0, 1}),
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
@@ -394,6 +397,18 @@ void FPEngine::mSetupShaders() {
 
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
                                          _textureShaderAttributeLocations.texCoord);
+
+    _postShaderProgram = new CSCI441::ShaderProgram("shaders/post.v.glsl", "shaders/post.f.glsl");
+    _postShaderUniformLocations.mvpMatrix = _postShaderProgram->getUniformLocation("mvpMatrix");
+    _postShaderUniformLocations.sceneTexture = _postShaderProgram->getUniformLocation("sceneTexture");
+    _postShaderUniformLocations.rOffset = _postShaderProgram->getUniformLocation("rOffset");
+    _postShaderUniformLocations.gOffset = _postShaderProgram->getUniformLocation("gOffset");
+    _postShaderUniformLocations.bOffset = _postShaderProgram->getUniformLocation("bOffset");
+
+    _postShaderAttributeLocations.vPos = _postShaderProgram->getAttributeLocation("vPos");
+    _postShaderAttributeLocations.texCoord = _postShaderProgram->getAttributeLocation("texCoord");
+    CSCI441::setVertexAttributeLocations(_postShaderAttributeLocations.vPos,_postShaderAttributeLocations.texCoord);
+
 }
 
 void FPEngine::mSetupTextures() {
@@ -415,6 +430,52 @@ void FPEngine::mSetupBuffers() {
   CSCI441::setVertexAttributeLocations(
       _textureShaderAttributeLocations.vPos,
       _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
+
+    // this is for post-processing chromatic abberition stuff im pretty sure
+    glGenFramebuffers(1,&_postFBO); // framebuffers
+    glBindFramebuffer(GL_FRAMEBUFFER,_postFBO);
+    glGenTextures(1,&_postTextureID); // color textures
+    glBindTexture(GL_TEXTURE_2D, _postTextureID);
+    int width, height;
+    glfwGetWindowSize(mpWindow, &width, &height);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGB,
+        width,
+        height,
+        0,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        nullptr
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D,
+        _postTextureID,
+        0);
+    GLuint depthRBO;
+    glGenRenderbuffers(1, &depthRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
+    glRenderbufferStorage(
+        GL_RENDERBUFFER,
+        GL_DEPTH24_STENCIL8,
+        width,
+        height
+    );
+
+    glFramebufferRenderbuffer(
+        GL_FRAMEBUFFER,
+        GL_DEPTH_STENCIL_ATTACHMENT,
+        GL_RENDERBUFFER,
+        depthRBO
+    );
+    _createQuad(_quadVAO,_quadVBO,_quadIBO, _numQuadVAOPoints); // creating screen sized quad
 
   _createGroundBuffers();
   _generateEnvironment();
@@ -669,7 +730,9 @@ void FPEngine::mCleanupBuffers() {
   fprintf(stdout, "[INFO]: ...deleting VAOs....\n");
   CSCI441::deleteObjectVAOs();
   glDeleteVertexArrays(1, &_groundVAO);
+    glDeleteFramebuffers(1, &_quadVAO);
   _groundVAO = 0;
+    _quadVAO = 0;
 
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
@@ -837,8 +900,53 @@ void FPEngine::_generateEnvironment() {
   }
 }
 
+void FPEngine::_createQuad(const GLuint VAO, const GLuint VBO, const GLuint IBO, GLsizei numVAOPoints) const {
+    // // TODO #22 - uncomment to get starter quad
+    // // UNCOMMENT BEGIN HERE
+    struct VertexNormalTextured {
+        glm::vec3 position;
+        glm::vec2 texCoord;
+    };
+
+    // create our custom quad
+    constexpr VertexNormalTextured quadVertices[4] = {
+        { { -1.0f, -1.0f, 0.0f},  { 0.0f, 0.0f } }, // 0 - BL
+        { {  1.0f, -1.0f,0.0f},  { 1.0f, 0.0f } }, // 1 - BR
+        { { -1.0f,  1.0f,0.0f},  { 0.0f, 1.0f } }, // 2 - TL
+        { {  1.0f,  1.0f,0.0f},  { 1.0f, 1.0f } }  // 3 - TR
+    };
+
+    constexpr GLushort quadIndices[4] = { 0, 1, 2, 3 };
+    numVAOPoints = 4;
+
+    glBindVertexArray( VAO );
+
+    glBindBuffer( GL_ARRAY_BUFFER, VBO );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( quadVertices ), quadVertices, GL_STATIC_DRAW );
+
+    glEnableVertexAttribArray( 0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormalTextured), (void*)nullptr );
+
+    glEnableVertexAttribArray( 1 );
+    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexNormalTextured), (void*)(offsetof(VertexNormalTextured,texCoord)) );
+
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, IBO );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( quadIndices ), quadIndices, GL_STATIC_DRAW );
+
+    fprintf( stdout, "[INFO]: quad read in with VAO/VBO/IBO %d/%d/%d & %d points\n", VAO, VBO, IBO, numVAOPoints );
+    // UNCOMMENT  END  HERE
+}
+
 void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                             const glm::vec3 &cameraPos) const {
+    int w, h;
+    glfwGetFramebufferSize(mpWindow, &w, &h);
+    glViewport(0, 0, w, h);
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glViewport(0, 0, w, h);
+    glClearColor(1, 0, 1, 1); // DEBUG: bright magenta
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // buffer clearing
+
   _pSkybox->draw(viewMtx, projMtx);
   
 
@@ -1002,6 +1110,33 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
 
+    // FRAME BUFFER STUFF
+        // get important offset values
+    glm::mat4 postMvpMtx = glm::mat4(1.0f);
+    glm::vec3 colorOffset = glm::vec3(5.0f);
+
+    // get buffer ready to draw or something
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind
+    glViewport(0, 0, w, h);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    _postShaderProgram->useProgram(); // use post shader program
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D,_postTextureID); // bind color texture
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.sceneTexture,0);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.mvpMatrix, postMvpMtx);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.rOffset, glm::vec2(colorOffset.r, colorOffset.r));
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.gOffset, glm::vec2(colorOffset.g, colorOffset.g));
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.bOffset, glm::vec2(colorOffset.b, colorOffset.b));
+
+    // draw that bitch ass quad
+    GLint currentProgram;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    glBindVertexArray(_quadVAO);
+    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    glDepthMask(GL_TRUE);
 }
 
 void FPEngine::_updateScene() {

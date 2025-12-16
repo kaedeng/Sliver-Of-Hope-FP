@@ -3,6 +3,8 @@
 // uniform inputs
 // TODO #E - add uniform
 uniform sampler2D textureMap;
+uniform vec3 materialColor;
+uniform bool isTextured;
 // varying inputs
 
 in vec3 fragNormal;
@@ -26,9 +28,15 @@ void main() {
     // Spotlight
     vec3 lightToSurfaceDir = normalize(fragPosition-fragSpotlightPosition);
     vec3 spotLightDir = normalize(-lightToSurfaceDir);
-
-    vec4 texColor = texture(textureMap, fragTexCoord);
-    vec3 baseColor = texColor.rgb;
+    
+    vec3 baseColor;
+    if(isTextured){
+        vec4 texColor = texture(textureMap, fragTexCoord);
+        baseColor = texColor.rgb;
+    }
+    else{
+        baseColor = materialColor;
+    }
 
     vec3 spotDiffuse = max(dot(N, spotLightDir), 0.0) * baseColor * fragSpotlightColor;
 
@@ -50,8 +58,13 @@ void main() {
 
     vec3 finalColor = pointColor + spotColor;
 
-    // TODO #F - get texel
-    vec4 texelColor = texture(textureMap, fragTexCoord);
-    // TODO #G - set texel
-    fragColorOut = texelColor * vec4(finalColor, 1.0f);
+    if(isTextured){
+        // TODO #F - get texel
+        vec4 texelColor = texture(textureMap, fragTexCoord);
+        // TODO #G - set texel
+        fragColorOut = texelColor * vec4(finalColor, 1.0f);
+    }
+    else{
+        fragColorOut = vec4(finalColor, 1.0f);
+    }
 }

@@ -8,6 +8,8 @@ uniform vec3 spotLightPosition;
 uniform vec3 spotLightDirection;
 uniform vec3 spotLightColor;
 uniform vec3 cameraPosition;
+uniform vec3 materialColor;
+uniform bool isTextured;
 
 // attribute inputs
 layout(location = 0) in vec3 vPos;

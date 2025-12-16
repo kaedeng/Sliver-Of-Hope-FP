@@ -15,19 +15,16 @@
 // Public Interface
 
 FPEngine::FPEngine()
-    : CSCI441::OpenGLEngine(4, 1, 640, 480, "FP: The Big Spooky"),
+    : CSCI441::OpenGLEngine(4, 1, 960, 720, "FP: The Big Spooky"),
       _mousePosition({MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED}),
       _leftMouseButtonState(GLFW_RELEASE), _cam(nullptr),
       _cameraSpeed({0.0f, 0.0f}), _cameraPitch(glm::pi<float>() * 0.5f),
       _groundVAO(0), _numGroundPoints(0),
-      _lightingShaderProgram(nullptr),
     _spriteShaderProgram(nullptr), 
     _spriteShaderUniformLocations( {-1, -1} ),
     _textureShaderProgram(nullptr),
     _textureShaderUniformLocations({-1, -1}),
-    _textureShaderAttributeLocations({-1, -1, -1}),
-      _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
-      _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
+    _textureShaderAttributeLocations({-1, -1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
@@ -87,11 +84,11 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _elsterShaderUniformLocations.materialDiffuse,
           _elsterShaderUniformLocations.materialSpecular,
           _elsterShaderUniformLocations.materialShininess);
-      _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
-                              _lightingShaderUniformLocations.mvpMatrix,
-                              _lightingShaderUniformLocations.normalMatrix,
-                              _lightingShaderUniformLocations.materialColor,
-                              _lightingShaderUniformLocations.modelMatrix);
+      _pWilfred = new Wilfred(_textureShaderProgram->getShaderProgramHandle(),
+                              _textureShaderUniformLocations.mvpMatrix,
+                              _textureShaderUniformLocations.normalMatrix,
+                              _textureShaderUniformLocations.materialColor,
+                              _textureShaderUniformLocations.modelMatrix);
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -206,40 +203,6 @@ void FPEngine::mSetupOpenGL() {
 }
 
 void FPEngine::mSetupShaders() {
-  _lightingShaderProgram =
-      new CSCI441::ShaderProgram("shaders/mp.v.glsl", "shaders/mp.f.glsl");
-  _lightingShaderUniformLocations.mvpMatrix =
-      _lightingShaderProgram->getUniformLocation("mvpMatrix");
-  _lightingShaderUniformLocations.materialColor =
-      _lightingShaderProgram->getUniformLocation("materialColor");
-  // TODO #3A: assign uniforms
-  _lightingShaderUniformLocations.lightDirection =
-      _lightingShaderProgram->getUniformLocation("lightDirection");
-  _lightingShaderUniformLocations.lightPosition =
-      _lightingShaderProgram->getUniformLocation("lightPosition");
-  _lightingShaderUniformLocations.spotLightPosition =
-      _lightingShaderProgram->getUniformLocation("spotLightPosition");
-  _lightingShaderUniformLocations.spotLightDirection =
-      _lightingShaderProgram->getUniformLocation("spotLightDirection");
-  _lightingShaderUniformLocations.lightColor =
-      _lightingShaderProgram->getUniformLocation("lightColor");
-  _lightingShaderUniformLocations.spotLightColor =
-      _lightingShaderProgram->getUniformLocation("spotLightColor");
-  _lightingShaderUniformLocations.pointLightColor =
-      _lightingShaderProgram->getUniformLocation("pointLightColor");
-  _lightingShaderUniformLocations.normalMatrix =
-      _lightingShaderProgram->getUniformLocation("normalMatrix");
-  _lightingShaderUniformLocations.modelMatrix =
-      _lightingShaderProgram->getUniformLocation("modelMatrix");
-  _lightingShaderUniformLocations.cameraPosition =
-      _lightingShaderProgram->getUniformLocation("cameraPosition");
-
-  _lightingShaderAttributeLocations.vPos =
-      _lightingShaderProgram->getAttributeLocation("vPos");
-  // TODO #3B: assign attributes
-  _lightingShaderAttributeLocations.vNormal =
-      _lightingShaderProgram->getAttributeLocation("vNormal");
-
   _elsterShaderProgram = new CSCI441::ShaderProgram("shaders/elster.v.glsl",
                                                     "shaders/elster.f.glsl");
 
@@ -412,6 +375,11 @@ void FPEngine::mSetupShaders() {
 
    _textureShaderUniformLocations.cameraPosition =
       _textureShaderProgram->getUniformLocation("cameraPosition");
+      
+   _textureShaderUniformLocations.materialColor =
+      _textureShaderProgram->getUniformLocation("materialColor");
+   _textureShaderUniformLocations.isTextured =
+      _textureShaderProgram->getUniformLocation("isTextured");
 
     // set static uniforms
     // TODO #13 - set uniform
@@ -445,8 +413,8 @@ void FPEngine::mSetupTextures() {
 void FPEngine::mSetupBuffers() {
   // TODO #4: need to connect our 3D Object Library to our shader
   CSCI441::setVertexAttributeLocations(
-      _lightingShaderAttributeLocations.vPos,
-      _lightingShaderAttributeLocations.vNormal);
+      _textureShaderAttributeLocations.vPos,
+      _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
   _createGroundBuffers();
   _generateEnvironment();
@@ -558,11 +526,11 @@ void FPEngine::mSetupScene() {
 
   _cameraSpeed = glm::vec2(0.25f, 0.02f);
 
-  _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
-                          _lightingShaderUniformLocations.mvpMatrix,
-                          _lightingShaderUniformLocations.normalMatrix,
-                          _lightingShaderUniformLocations.materialColor,
-                          _lightingShaderUniformLocations.modelMatrix);
+  _pWilfred = new Wilfred(_textureShaderProgram->getShaderProgramHandle(),
+                          _textureShaderUniformLocations.mvpMatrix,
+                          _textureShaderUniformLocations.normalMatrix,
+                          _textureShaderUniformLocations.materialColor,
+                          _textureShaderUniformLocations.modelMatrix);
     _pWilfred->setPosition(glm::vec3(10.0f, _getTerrainHeight(10.0f, 10.0f), 10.0f));
 
   // enemy Elster
@@ -576,11 +544,11 @@ void FPEngine::mSetupScene() {
                     _elsterShaderUniformLocations.materialShininess);
 
   // Farina
-  _pFarina = new Farina(_lightingShaderProgram->getShaderProgramHandle(),
-                        _lightingShaderUniformLocations.mvpMatrix,
-                        _lightingShaderUniformLocations.materialColor,
-                        _lightingShaderUniformLocations.normalMatrix,
-                        _lightingShaderUniformLocations.modelMatrix);
+  _pFarina = new Farina(_textureShaderProgram->getShaderProgramHandle(),
+                        _textureShaderUniformLocations.mvpMatrix,
+                        _textureShaderUniformLocations.materialColor,
+                        _textureShaderUniformLocations.normalMatrix,
+                        _textureShaderUniformLocations.modelMatrix);
 
   _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
 
@@ -618,23 +586,8 @@ void FPEngine::_setLightingParameters() {
   const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
   const glm::vec3 spotLightDirection =
       glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-  _lightingShaderProgram->useProgram();
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightDirection, lightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightPosition, lightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightColor, lightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightColor, spotLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.pointLightColor, pointLightColor);
-
-  const glm::vec3 ambientLightColor = glm::vec3(0.71, 0.54, 0.7);
+  
+      const glm::vec3 ambientLightColor = glm::vec3(0.71, 0.54, 0.7);
 
   _elsterShaderProgram->useProgram();
   _elsterShaderProgram->setProgramUniform(
@@ -702,8 +655,6 @@ void FPEngine::_setLightingParameters() {
 
 void FPEngine::mCleanupShaders() {
   fprintf(stdout, "[INFO]: ...deleting Shaders.\n");
-  delete _lightingShaderProgram;
-  _lightingShaderProgram = nullptr;
   delete _elsterShaderProgram;
   _elsterShaderProgram = nullptr;
   delete _groundTessShaderProgram;
@@ -968,27 +919,19 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
   _pEnemyElster->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
-  // lighting shader
-  _lightingShaderProgram->useProgram();
-
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightDirection, lightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightPosition, lightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightColor, lightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightColor, spotLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.pointLightColor, pointLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.cameraPosition, cameraPos);
-
   /// OLD MAN TIME
+  _textureShaderProgram->useProgram();
+  _textureShaderProgram->useProgram();
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightColor, spotLightColor);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.cameraPosition, cameraPos);
+  _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.isTextured, false);
+
   glm::mat4 wilfredModelMtx(1.0f);
   _pWilfred->_animateBro(); // get this man an animation
   _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
@@ -997,16 +940,9 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // Farina
   _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
-  _textureShaderProgram->useProgram();
-
+  
   _textureShaderProgram->setProgramUniform(
-      _textureShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _textureShaderProgram->setProgramUniform(
-      _textureShaderUniformLocations.spotLightDirection, spotLightDirection);
-  _textureShaderProgram->setProgramUniform(
-      _textureShaderUniformLocations.spotLightColor, spotLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _textureShaderUniformLocations.cameraPosition, cameraPos);
+      _textureShaderUniformLocations.isTextured, true);
   
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
@@ -1304,28 +1240,50 @@ void FPEngine::_updateScene() {
                                 glm::vec3(0.0f, 5.0f, 0.0f));
     _arcBallCam->recomputeOrientation();
   } else if (_cam == _firstPersonCam) {
-    const float EYE_HEIGHT = 5.0f; // TODO: find a better height i just placed it
-    glm::vec3 characterPos = _pCharacter->getPosition();
-    glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
+    glm::vec3 spotLightPosition;
+    glm::vec3 spotLightDirection;
+    if(!_characterDead){  
+      const float EYE_HEIGHT = 4.0f; // TODO: find a better height i just placed it
+      glm::vec3 characterPos = _pCharacter->getPosition();
+      glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
 
-    // update camera position to match character
-    _firstPersonCam->setPosition(cameraPos);
+      // update camera position to match character
+      _firstPersonCam->setPosition(cameraPos);
 
-    // Camera should look in the direction the character is facing
-    float characterHeading = _pCharacter->getHeading();
-    _firstPersonCam->setTheta(-characterHeading);
-    _firstPersonCam->setPhi(_cameraPitch);
+      // Camera should look in the direction the character is facing
+      float characterHeading = _pCharacter->getHeading();
+      _firstPersonCam->setTheta(-characterHeading);
+      _firstPersonCam->setPhi(_cameraPitch);
 
-    _firstPersonCam->recomputeOrientation();
-      const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
-      const glm::vec3 spotLightDirection =
-          glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-      _lightingShaderProgram->useProgram();
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
-
+      _firstPersonCam->recomputeOrientation();
+      spotLightPosition = _firstPersonCam->getPosition();
+      spotLightDirection =
+            glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
+    }
+    else{
+      glm::vec3 cameraPos = _firstPersonCam->getPosition();
+      if (cameraPos.y > _pEnemyElster->getPosition().y+0.8f){ // Death Falling animation
+        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y-7.0f*deltaTime, cameraPos.z));
+      }
+      switch (_enemyThatKilled){
+        case 0: // Tympanius
+          _firstPersonCam->setLookAtPoint(_pTympanius->getPosition());
+          break;
+        case 1: // Wilfred
+          _firstPersonCam->setLookAtPoint(_pWilfred->getPosition());
+          break;
+        case 2: // Enemy Elster
+          _firstPersonCam->setLookAtPoint(_pEnemyElster->getPosition());
+          break;
+        case 3: // Farina
+          _firstPersonCam->setLookAtPoint(_pFarina->getPosition());
+          break;
+      }
+      _firstPersonCam->computeViewMatrix();
+      spotLightPosition = _firstPersonCam->getPosition();
+      spotLightDirection =
+            glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
+    }
   _elsterShaderProgram->useProgram();
   _elsterShaderProgram->setProgramUniform(
       _elsterShaderUniformLocations.spotLightPosition, spotLightPosition);
@@ -1399,16 +1357,16 @@ void FPEngine::_computeAndSendMatrixUniforms(const glm::mat4 &modelMtx,
   // precompute the Model-View-Projection matrix on the CPU
   const glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
   // then send it to the shader on the GPU to apply to every vertex
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.mvpMatrix, mvpMtx);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.mvpMatrix, mvpMtx);
 
   // TODO #7: compute and send the normal matrix
   const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(modelMtx)));
   // then send it to the shader on the GPU to apply to every vertex
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.normalMatrix, normalMtx);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.modelMatrix, modelMtx);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.normalMatrix, normalMtx);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.modelMatrix, modelMtx);
 }
 
 float FPEngine::_getTerrainHeight(float x, float z) const {
@@ -1629,7 +1587,9 @@ void FPEngine::_checkPlayerEnemyCollision() {
   if (tympaniusDistance < tympaniusMinDistance &&
       tympaniusVerticalDistance < maxVerticalDistance) {
     _characterDead = true;
+    _enemyThatKilled = 0;
     _particleSystem->spawnBurst(playerPos, 30);
+    _firstPersonCam->setLookAtPoint(tympaniusPos);
     fprintf(stdout, "[INFO]: Player hit by Tympanius! Game Over!\n");
     fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
     return;
@@ -1645,6 +1605,7 @@ void FPEngine::_checkPlayerEnemyCollision() {
   if (wilfredDistance < wilfredMinDistance &&
       wilfredVerticalDistance < maxVerticalDistance) {
     _characterDead = true;
+    _enemyThatKilled = 1;
     _particleSystem->spawnBurst(playerPos, 30);
     fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
     fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
@@ -1661,6 +1622,7 @@ void FPEngine::_checkPlayerEnemyCollision() {
   if (elsterDistance < elsterMinDistance &&
       elsterVerticalDistance < maxVerticalDistance) {
     _characterDead = true;
+    _enemyThatKilled = 2;
     _particleSystem->spawnBurst(playerPos, 30);
     fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
     fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
@@ -1675,6 +1637,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (farinaDist < farinaMinDist && farinaVertDist < 2.0f) {
     _characterDead = true;
+    _enemyThatKilled = 3;
+    _firstPersonCam->setLookAtPoint(farinaPos);
     _particleSystem->spawnBurst(playerPos, 30);
     return;
   }

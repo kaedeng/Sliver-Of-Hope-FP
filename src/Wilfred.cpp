@@ -42,7 +42,7 @@ void Wilfred::setProgramUniformLocations(
 
 void Wilfred::drawWilfred(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                           const glm::mat4 &projMtx) {
-  modelMtx = glm::translate(modelMtx, glm::vec3(_position.x, _position.y + 5.5f, _position.z));
+  modelMtx = glm::translate(modelMtx, glm::vec3(_position.x, _position.y + 3.5f, _position.z));
   // scale that bitch
   modelMtx = glm::scale(modelMtx, {7, 7, 7});
   // rotate the character to make him upright

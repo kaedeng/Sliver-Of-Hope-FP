@@ -28,8 +28,13 @@ layout(location = 1) in vec3 vNormal;
 layout(location = 2) in vec2 vTexPos;
 
 // varying outputs
-layout(location = 0) out vec3 color;    // color to apply to this vertex
-layout(location = 2) out vec2 texPos;
+out vec3 fragNormal;
+out vec3 fragPosition;
+out vec3 fragSpotlightPosition;
+out vec3 fragSpotlightDirection;
+out vec3 fragSpotlightColor;
+out vec3 fragViewDir;
+out vec2 fragTexCoord;
 
 void main() {
     gl_Position = mvpMatrix * vec4(vPos, 1.0);
@@ -46,17 +51,12 @@ void main() {
         baseColor = materialColor;
     }
 
-    vec3 lightDiffuse = lightColor*baseColor*max(dot(lightVector, normalizeVNormal), 0);
-
-    vec3 reflectionVector = -lightDir+2*dot(normalizeVNormal, lightDir)*normalizeVNormal;
-    vec3 viewVector = normalize(cameraPos-worldPos);
-    vec3 lightSpecular = lightColor*baseColor*pow(max(dot(reflectionVector, viewVector), 0), shininessAlpha);
-    
-    vec3 lightAmbient = ambientLightColor*baseColor;
-
-    vec3 dirColor = lightDiffuse + lightSpecular;
-    
-    color = lightAmbient + dirColor;
-
-    texPos = vTexPos;
+    // Pass data to fragment shader for per-pixel lighting
+    fragNormal = normalizeVNormal;
+    fragPosition = worldPos;
+    fragSpotlightPosition = spotLightPosition;
+    fragSpotlightDirection = spotLightDirection;
+    fragSpotlightColor = spotLightColor;
+    fragViewDir = cameraPos - worldPos;
+    fragTexCoord = vTexPos;
 }

@@ -123,6 +123,7 @@ private:
   float _characterVerticalVelocity;
   bool _characterOnGround;
   bool _characterDead;
+  int _enemyThatKilled = -1; // 0 = Tympanius, 1 = Wilfred, 2 = Elster, 3 = Farina
 
   Skybox *_pSkybox;
 
@@ -183,36 +184,6 @@ private:
   /// \desc creates the ground VAO
   void _createGroundBuffers();
 
-  /// \desc shader program that performs lighting
-  CSCI441::ShaderProgram
-      *_lightingShaderProgram; // the wrapper for our shader program
-  /// \desc stores the locations of all of our shader uniforms
-  struct LightingShaderUniformLocations {
-    /// \desc precomputed MVP matrix location
-    GLint mvpMatrix;
-    /// \desc material diffuse color location
-    GLint materialColor;
-    // TODO #1: add new uniforms
-    GLint lightDirection;
-    GLint lightPosition;
-    GLint pointLightColor;
-    GLint spotLightPosition;
-    GLint spotLightDirection;
-    GLint spotLightColor;
-    GLint lightColor;
-    GLint normalMatrix;
-    GLint modelMatrix;
-    GLint cameraPosition;
-  } _lightingShaderUniformLocations;
-  /// \desc stores the locations of all of our shader attributes
-  struct LightingShaderAttributeLocations {
-    /// \desc vertex position location
-    GLint vPos;
-    // TODO #2: add new attributes
-    GLint vNormal;
-
-  } _lightingShaderAttributeLocations;
-
   CSCI441::ShaderProgram
       *_textureShaderProgram; // the wrapper for our shader program
   struct TextureShaderUniformLocations {
@@ -226,6 +197,8 @@ private:
     GLint normalMatrix;
     GLint modelMatrix;
     GLint cameraPosition;
+    GLint materialColor;
+    GLint isTextured;
   } _textureShaderUniformLocations;
 
   struct TextureShaderAttributeLocations {

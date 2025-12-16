@@ -13,11 +13,15 @@ uniform float bNoise;
 
 out vec4 fragColor;
 
+float random(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+
 void main() {
     // Sample each color channel with its offset for chromatic aberration
     float r = texture(sceneTexture, fragTexCoord + rOffset).r;
     float g = texture(sceneTexture, fragTexCoord + gOffset).g;
     float b = texture(sceneTexture, fragTexCoord + bOffset).b;
 
-    fragColor = vec4(vec3(r, g, b)*(1.0f-rNoise*15), 1.0);
+    float randomVal = random(fragTexCoord)/2;
+
+    fragColor = vec4((vec3(r, g, b)+vec3(randomVal*rNoise*10))*(1.0f-rNoise*15), 1.0);
 }

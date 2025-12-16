@@ -1,5 +1,7 @@
 #include "FPEngine.h"
 
+#include <iostream>
+#include <sstream>
 #include <CSCI441/objects.hpp>
 #include <stb_image.h>
 
@@ -19,12 +21,17 @@ FPEngine::FPEngine()
       _cameraSpeed({0.0f, 0.0f}), _cameraPitch(glm::pi<float>() * 0.5f),
       _groundVAO(0), _numGroundPoints(0),
       _lightingShaderProgram(nullptr),
+    _spriteShaderProgram(nullptr), 
+    _spriteShaderUniformLocations( {-1, -1} ),
+    _textureShaderProgram(nullptr),
+    _textureShaderUniformLocations({-1, -1}),
+    _textureShaderAttributeLocations({-1, -1, -1}),
       _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
       _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0) {
+      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0){
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -40,6 +47,7 @@ FPEngine::~FPEngine() {
   delete _pFarina;
   delete _elsterShaderProgram;
   delete _groundTessShaderProgram;
+    delete _textureShaderProgram;
   delete _pSkybox;
   delete _spriteShaderProgram;
   delete _particleSystem;
@@ -383,12 +391,35 @@ void FPEngine::mSetupShaders() {
       _spriteShaderProgram->getUniformLocation("mvpMatrix");
   _spriteShaderUniformLocations.spriteTexture =
       _spriteShaderProgram->getUniformLocation("spriteTexture");
+
+    // texture shader
+    _textureShaderProgram = new CSCI441::ShaderProgram("shaders/lab06.v.glsl", "shaders/lab06.f.glsl" );
+    // query uniform locations
+    _textureShaderUniformLocations.mvpMatrix      = _textureShaderProgram->getUniformLocation("mvpMatrix");
+    // TODO #12A - texture map
+    _textureShaderUniformLocations.texMap      = _textureShaderProgram->getUniformLocation("textureMap");
+
+    // set static uniforms
+    // TODO #13 - set uniform
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.texMap, 0);
+
+    _textureShaderAttributeLocations.vPos =
+    _textureShaderProgram->getAttributeLocation("vPos");
+  _textureShaderAttributeLocations.vNormal =
+      _textureShaderProgram->getAttributeLocation("vNormal");
+  _textureShaderAttributeLocations.texCoord =
+      _textureShaderProgram->getAttributeLocation("vTexPos");
+
+    CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
+                                         _textureShaderAttributeLocations.texCoord);
 }
 
 void FPEngine::mSetupTextures() {
   // TODO #09 - load textures
   _texHandles[TEXTURE_ID::GROUND] =
-      _loadAndRegisterTexture("assets/textures/floor.png");
+      _loadAndRegisterTexture("./assets/textures/floor.png");
+  _texHandles[TEXTURE_ID::WALL] = 
+      _loadAndRegisterTexture("./assets/textures/bricks.png");
   _texHandles[TEXTURE_ID::ENEMY] =
       _loadAndRegisterTexture("assets/textures/goomba.png");
   _texHandles[TEXTURE_ID::COIN] =
@@ -494,7 +525,7 @@ void FPEngine::mSetupScene() {
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
-  _pCharacter->setPosition(glm::vec3(0.0f, _getTerrainHeight(0.0f, 0.0f), 0.0f));
+  _pCharacter->setPosition(glm::vec3(70.0f, _getTerrainHeight(20.0f, 0.0f), 0.0f));
 
   _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
   _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
@@ -659,6 +690,8 @@ void FPEngine::mCleanupShaders() {
   _groundTessShaderProgram = nullptr;
   delete _spriteShaderProgram;
   _spriteShaderProgram = nullptr;
+    delete _textureShaderProgram;
+    _textureShaderProgram = nullptr;
 }
 
 void FPEngine::mCleanupBuffers() {
@@ -707,6 +740,44 @@ void FPEngine::_generateEnvironment() {
   const glm::vec2 coinCorners[4] = {
       glm::vec2(-coinOffset, -coinOffset), glm::vec2(coinOffset, -coinOffset),
       glm::vec2(-coinOffset, coinOffset), glm::vec2(coinOffset, coinOffset)};
+    // read in map file for bushes
+    std::string line;
+    std::string square;
+    // open file
+    std::ifstream inputFile("map.txt");
+
+    // Check if the file was opened successfully
+    if (inputFile.is_open()) {
+        int row = 0, col = 0;
+        // Use a while loop with std::getline to read the file line by line
+        float width = (RIGHT_END_POINT - LEFT_END_POINT)/28;
+        float height = (TOP_END_POINT - BOTTOM_END_POINT)/28;
+        while (std::getline(inputFile, line)) {
+            col=0;
+            std::istringstream lineStream(line);
+            while (lineStream >> square) {
+                if (square == "x") {
+                    // put a wall here
+                    BushData bush;
+                    bush.size = width/2;
+                    float bushX = LEFT_END_POINT+(col*width);
+                    float bushZ = BOTTOM_END_POINT+(row*height);
+                    float terrainY = _getTerrainHeight(bushX, bushZ);
+                    // bush sits on the terrain
+                    bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
+                    bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
+                                           0.588 + (getRand() - 2) * 0.15,
+                                           0.455 + (getRand() - 2) * 0.15);
+                    _bushes.push_back(bush);
+                }
+                col++;
+            }
+            row++;
+        }
+        inputFile.close(); // Close the file stream
+    } else {
+        std::cerr << "Unable to open file" << std::endl;
+    }
 
   // psych! everything's on a grid.
   for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) {
@@ -846,7 +917,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       _groundTessShaderUniformLocations.cameraPosition, cameraPos);
 
   // Bind ground texture
-  glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::GROUND]);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.groundTexture, 0);
@@ -907,15 +977,22 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // Farina
   _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
+    _textureShaderProgram->useProgram();
+  
+    CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
+
+    glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
+
   for (const auto &bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size));
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2.0f, bush.size));
+      glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
 
-    _computeAndSendMatrixUniforms(bushModelMtx, viewMtx, projMtx);
-    _lightingShaderProgram->setProgramUniform(
-        _lightingShaderUniformLocations.materialColor, bush.color);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
+    //_lightingShaderProgram->setProgramUniform(
+        //_lightingShaderUniformLocations.materialColor, bush.color);
 
-    CSCI441::drawSolidSphere(1.0f, 16, 16);
+      CSCI441::drawSolidCubeTextured(2.0f);
   }
   
   _tympaniusShaderProgram->setProgramUniform(
@@ -954,6 +1031,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         _spriteShaderUniformLocations.mvpMatrix,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
+
 }
 
 void FPEngine::_updateScene() {
@@ -1046,7 +1124,7 @@ void FPEngine::_updateScene() {
     // Use object height as the landing surface
     float surfaceHeight = terrainHeight;
     if (objectHeight > -500.0f && objectHeight > terrainHeight) {
-      surfaceHeight = objectHeight;
+      //surfaceHeight = objectHeight;
     }
 
     // if character should be on the ground
@@ -1401,7 +1479,6 @@ GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
     // TODO #06 - wrap t
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     // TODO #07 - transfer image data to the GPU
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glTexImage2D(GL_TEXTURE_2D, 0, STORAGE_TYPE, imageWidth, imageHeight, 0,
                  STORAGE_TYPE, GL_UNSIGNED_BYTE, data);
 

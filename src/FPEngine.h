@@ -180,7 +180,7 @@ private:
   GLuint _quadIBO;
   GLsizei _numQuadVAOPoints = 0;
 
-  void _createQuad(GLuint VAO, GLuint VBO, GLuint IBO, GLsizei numVAOPoints) const;
+  void _createQuad();
 
   /// \desc generates tree information to make up our scene
   void _generateEnvironment();

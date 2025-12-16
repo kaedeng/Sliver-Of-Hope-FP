@@ -405,6 +405,13 @@ void FPEngine::mSetupShaders() {
     _postShaderUniformLocations.gOffset = _postShaderProgram->getUniformLocation("gOffset");
     _postShaderUniformLocations.bOffset = _postShaderProgram->getUniformLocation("bOffset");
 
+    // Debug: print uniform locations to verify they're valid
+    fprintf(stdout, "[DEBUG] Post shader uniforms - sceneTexture: %d, rOffset: %d, gOffset: %d, bOffset: %d\n",
+            _postShaderUniformLocations.sceneTexture,
+            _postShaderUniformLocations.rOffset,
+            _postShaderUniformLocations.gOffset,
+            _postShaderUniformLocations.bOffset);
+
     _postShaderAttributeLocations.vPos = _postShaderProgram->getAttributeLocation("vPos");
     _postShaderAttributeLocations.texCoord = _postShaderProgram->getAttributeLocation("texCoord");
     CSCI441::setVertexAttributeLocations(_postShaderAttributeLocations.vPos,_postShaderAttributeLocations.texCoord);
@@ -431,13 +438,16 @@ void FPEngine::mSetupBuffers() {
       _textureShaderAttributeLocations.vPos,
       _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
-    // this is for post-processing chromatic abberition stuff im pretty sure
-    glGenFramebuffers(1,&_postFBO); // framebuffers
-    glBindFramebuffer(GL_FRAMEBUFFER,_postFBO);
-    glGenTextures(1,&_postTextureID); // color textures
+    // this is for post-processing chromatic aberration stuff
+    glGenFramebuffers(1, &_postFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glGenTextures(1, &_postTextureID);
     glBindTexture(GL_TEXTURE_2D, _postTextureID);
+
+    // IMPORTANT: Use glfwGetFramebufferSize for actual pixel dimensions (Retina displays)
     int width, height;
-    glfwGetWindowSize(mpWindow, &width, &height);
+    glfwGetFramebufferSize(mpWindow, &width, &height);
+
     glTexImage2D(
         GL_TEXTURE_2D,
         0,
@@ -459,6 +469,7 @@ void FPEngine::mSetupBuffers() {
         GL_TEXTURE_2D,
         _postTextureID,
         0);
+
     GLuint depthRBO;
     glGenRenderbuffers(1, &depthRBO);
     glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
@@ -475,7 +486,21 @@ void FPEngine::mSetupBuffers() {
         GL_RENDERBUFFER,
         depthRBO
     );
-    _createQuad(_quadVAO,_quadVBO,_quadIBO, _numQuadVAOPoints); // creating screen sized quad
+
+    // Check framebuffer completeness
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        fprintf(stderr, "[ERROR]: Post-processing framebuffer is not complete!\n");
+    } else {
+        fprintf(stdout, "[INFO]: Post-processing framebuffer created successfully\n");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO after setup
+
+    // Generate VAO/VBO/IBO for post-processing quad
+    glGenVertexArrays(1, &_quadVAO);
+    glGenBuffers(1, &_quadVBO);
+    glGenBuffers(1, &_quadIBO);
+    _createQuad(); // creating screen sized quad
 
   _createGroundBuffers();
   _generateEnvironment();
@@ -730,9 +755,13 @@ void FPEngine::mCleanupBuffers() {
   fprintf(stdout, "[INFO]: ...deleting VAOs....\n");
   CSCI441::deleteObjectVAOs();
   glDeleteVertexArrays(1, &_groundVAO);
-    glDeleteFramebuffers(1, &_quadVAO);
+  glDeleteVertexArrays(1, &_quadVAO);
+  glDeleteBuffers(1, &_quadVBO);
+  glDeleteBuffers(1, &_quadIBO);
+  glDeleteFramebuffers(1, &_postFBO);
+  glDeleteTextures(1, &_postTextureID);
   _groundVAO = 0;
-    _quadVAO = 0;
+  _quadVAO = 0;
 
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
@@ -900,52 +929,50 @@ void FPEngine::_generateEnvironment() {
   }
 }
 
-void FPEngine::_createQuad(const GLuint VAO, const GLuint VBO, const GLuint IBO, GLsizei numVAOPoints) const {
-    // // TODO #22 - uncomment to get starter quad
-    // // UNCOMMENT BEGIN HERE
-    struct VertexNormalTextured {
+void FPEngine::_createQuad() {
+    struct VertexTextured {
         glm::vec3 position;
         glm::vec2 texCoord;
     };
 
     // create our custom quad
-    constexpr VertexNormalTextured quadVertices[4] = {
+    constexpr VertexTextured quadVertices[4] = {
         { { -1.0f, -1.0f, 0.0f},  { 0.0f, 0.0f } }, // 0 - BL
-        { {  1.0f, -1.0f,0.0f},  { 1.0f, 0.0f } }, // 1 - BR
-        { { -1.0f,  1.0f,0.0f},  { 0.0f, 1.0f } }, // 2 - TL
-        { {  1.0f,  1.0f,0.0f},  { 1.0f, 1.0f } }  // 3 - TR
+        { {  1.0f, -1.0f, 0.0f},  { 1.0f, 0.0f } }, // 1 - BR
+        { { -1.0f,  1.0f, 0.0f},  { 0.0f, 1.0f } }, // 2 - TL
+        { {  1.0f,  1.0f, 0.0f},  { 1.0f, 1.0f } }  // 3 - TR
     };
 
     constexpr GLushort quadIndices[4] = { 0, 1, 2, 3 };
-    numVAOPoints = 4;
+    _numQuadVAOPoints = 4;
 
-    glBindVertexArray( VAO );
+    glBindVertexArray( _quadVAO );
 
-    glBindBuffer( GL_ARRAY_BUFFER, VBO );
+    glBindBuffer( GL_ARRAY_BUFFER, _quadVBO );
     glBufferData( GL_ARRAY_BUFFER, sizeof( quadVertices ), quadVertices, GL_STATIC_DRAW );
 
     glEnableVertexAttribArray( 0 );
-    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexNormalTextured), (void*)nullptr );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)nullptr );
 
     glEnableVertexAttribArray( 1 );
-    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexNormalTextured), (void*)(offsetof(VertexNormalTextured,texCoord)) );
+    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(offsetof(VertexTextured,texCoord)) );
 
-    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, IBO );
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, _quadIBO );
     glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( quadIndices ), quadIndices, GL_STATIC_DRAW );
 
-    fprintf( stdout, "[INFO]: quad read in with VAO/VBO/IBO %d/%d/%d & %d points\n", VAO, VBO, IBO, numVAOPoints );
-    // UNCOMMENT  END  HERE
+    fprintf( stdout, "[INFO]: quad read in with VAO/VBO/IBO %d/%d/%d & %d points\n", _quadVAO, _quadVBO, _quadIBO, _numQuadVAOPoints );
 }
 
 void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                             const glm::vec3 &cameraPos) const {
     int w, h;
-    glfwGetFramebufferSize(mpWindow, &w, &h);
-    glViewport(0, 0, w, h);
+    glfwGetFramebufferSize(mpWindow, &w, &h);  // Use framebuffer size, not window size
+
+    // Render scene to FBO
     glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
     glViewport(0, 0, w, h);
-    glClearColor(1, 0, 1, 1); // DEBUG: bright magenta
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // buffer clearing
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   _pSkybox->draw(viewMtx, projMtx);
   
@@ -1110,33 +1137,35 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
 
-    // FRAME BUFFER STUFF
-        // get important offset values
-    glm::mat4 postMvpMtx = glm::mat4(1.0f);
-    glm::vec3 colorOffset = glm::vec3(5.0f);
+    // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
+    // Chromatic aberration offsets (0.01 - 0.03 for subtle, higher for dramatic)
+    float aberrationStrength = 0.02f;
 
-    // get buffer ready to draw or something
-    glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind
+    // Bind default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, w, h);
     glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);
-    //glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    _postShaderProgram->useProgram(); // use post shader program
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D,_postTextureID); // bind color texture
-    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.sceneTexture,0);
-    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.mvpMatrix, postMvpMtx);
-    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.rOffset, glm::vec2(colorOffset.r, colorOffset.r));
-    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.gOffset, glm::vec2(colorOffset.g, colorOffset.g));
-    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.bOffset, glm::vec2(colorOffset.b, colorOffset.b));
 
-    // draw that bitch ass quad
-    GLint currentProgram;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+    _postShaderProgram->useProgram();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _postTextureID);
+    glUniform1i(_postShaderUniformLocations.sceneTexture, 0);
+
+    // Red shifts one direction, blue shifts the other, green stays centered
+    // Use raw OpenGL calls since setProgramUniform may not handle glm::vec2
+    glUniform2f(_postShaderUniformLocations.rOffset, aberrationStrength, 0.0f);
+    glUniform2f(_postShaderUniformLocations.gOffset, 0.0f, 0.0f);
+    glUniform2f(_postShaderUniformLocations.bOffset, -aberrationStrength, 0.0f);
+
+    // Draw fullscreen quad
     glBindVertexArray(_quadVAO);
-    glDrawElements( GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0 );
+    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0);
+
+    // Re-enable depth testing for next frame
     glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
 }
 
 void FPEngine::_updateScene() {

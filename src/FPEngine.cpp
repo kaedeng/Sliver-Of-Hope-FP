@@ -1096,38 +1096,48 @@ void FPEngine::_updateScene() {
       _firstPersonCam->setPhi(_cameraPitch);
 
       _firstPersonCam->recomputeOrientation();
-      spotLightPosition = _firstPersonCam->getPosition();
-      spotLightDirection =
-            glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
     }
     else{
       glm::vec3 cameraPos = _firstPersonCam->getPosition();
       if (cameraPos.y > _pEnemyElster->getPosition().y+1.2f){ // Death Falling animation
         _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y-2.5f*deltaTime, cameraPos.z));
       }
+
+      glm::vec3 killerPos;
       switch (_enemyThatKilled){
         case 0: // Tympanius
-          _firstPersonCam->setLookAtPoint(_pTympanius->getPosition());
+          killerPos = _pTympanius->getPosition();
           break;
         case 1: {// Wilfred
           glm::vec3 wilfred_Pos = _pWilfred->getPosition();
-          _firstPersonCam->setLookAtPoint(glm::vec3(wilfred_Pos.x, wilfred_Pos.y+2.5f, wilfred_Pos.z));
+          killerPos = glm::vec3(wilfred_Pos.x, wilfred_Pos.y+2.5f, wilfred_Pos.z);
           break;
         }
         case 2: { // Enemy Elster
           glm::vec3 enemyElster_Pos = _pEnemyElster->getPosition();
-          _firstPersonCam->setLookAtPoint(glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+1.5f, enemyElster_Pos.z));
+          killerPos = glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+1.5f, enemyElster_Pos.z);
           break;
         }
         case 3: // Farina
-          _firstPersonCam->setLookAtPoint(_pFarina->getPosition());
+          killerPos = _pFarina->getPosition();
           break;
       }
+    
+      _deathEasingParam = glm::min(_deathEasingParam + deltaTime * 0.1f, 1.0f);
+
+      glm::vec3 current = _firstPersonCam->getLookAtPoint();
+      glm::vec3 target = killerPos;
+
+      glm::vec3 mixed = glm::mix(current, target, pow(_deathEasingParam, 3));
+      _firstPersonCam->setLookAtPoint(mixed);
+        
       _firstPersonCam->computeViewMatrix();
-      spotLightPosition = _firstPersonCam->getPosition();
-      spotLightDirection =
-            glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
     }
+
+    spotLightPosition = _firstPersonCam->getPosition();
+    spotLightDirection =
+          glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
+
   _elsterShaderProgram->useProgram();
   _elsterShaderProgram->setProgramUniform(
       _elsterShaderUniformLocations.spotLightPosition, spotLightPosition);
@@ -1353,6 +1363,7 @@ void FPEngine::_checkEnemyCollisions() {
 void FPEngine::doDeath(const char* killerName, glm::vec3 playerPos){
     _characterDead = true;
     _particleSystem->spawnBurst(playerPos, 60);
+    _firstPersonCam->setLookAtPoint(playerPos);
     fprintf(stdout, "[INFO]: Player caught by %s! Game Over!\n", killerName);
     fprintf(stdout, "[INFO]: You lasted: %dm %ds\n", static_cast<int>(glfwGetTime())/60, static_cast<int>(glfwGetTime())%60);
 }

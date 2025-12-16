@@ -121,6 +121,7 @@ private:
   bool _characterOnGround;
   bool _characterDead;
   int _enemyThatKilled = -1; // 0 = Tympanius, 1 = Wilfred, 2 = Elster, 3 = Farina
+  float _deathEasingParam = 0;
 
   Skybox *_pSkybox;
 

@@ -1099,8 +1099,8 @@ void FPEngine::_updateScene() {
     }
     else{
       glm::vec3 cameraPos = _firstPersonCam->getPosition();
-      if (cameraPos.y > _pEnemyElster->getPosition().y+1.2f){ // Death Falling animation
-        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y-2.5f*deltaTime, cameraPos.z));
+      if (cameraPos.y < 1000.0f){ // Death Falling animation
+        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y+10.0f*deltaTime, cameraPos.z));
       }
 
       glm::vec3 killerPos;
@@ -1362,8 +1362,9 @@ void FPEngine::_checkEnemyCollisions() {
 
 void FPEngine::doDeath(const char* killerName, glm::vec3 playerPos){
     _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 60);
-    _firstPersonCam->setLookAtPoint(playerPos);
+    _particleSystem->spawnBurst(playerPos, 120);
+    glm::vec3 currentLookAt = _firstPersonCam->getLookAtPoint();
+    _firstPersonCam->setLookAtPoint(glm::vec3(currentLookAt.x, 50.0f, currentLookAt.z));
     fprintf(stdout, "[INFO]: Player caught by %s! Game Over!\n", killerName);
     fprintf(stdout, "[INFO]: You lasted: %dm %ds\n", static_cast<int>(glfwGetTime())/60, static_cast<int>(glfwGetTime())%60);
 }

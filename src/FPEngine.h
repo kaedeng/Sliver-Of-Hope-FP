@@ -118,6 +118,11 @@ private:
   Character *_pEnemyElster;
   Farina *_pFarina;
 
+  float aberrationStrength = 0.02f;
+  float rNoise = 0;
+  float gNoise = 0;
+  float bNoise = 0;
+
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;
@@ -297,6 +302,9 @@ private:
     GLint rOffset;
     GLint gOffset;
     GLint bOffset;
+    GLint rNoise;
+    GLint gNoise;
+    GLint bNoise;
 
   } _postShaderUniformLocations;
   struct PostShaderAttributeLocations {
@@ -315,6 +323,9 @@ private:
 
   // check collision between enemies
   void _checkEnemyCollisions();
+
+  // get closest enemy's distance to player
+  float _getEnemyDistance();
 
   // check collision between player and enemies
   void _checkPlayerEnemyCollision();

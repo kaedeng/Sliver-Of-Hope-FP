@@ -404,6 +404,9 @@ void FPEngine::mSetupShaders() {
     _postShaderUniformLocations.rOffset = _postShaderProgram->getUniformLocation("rOffset");
     _postShaderUniformLocations.gOffset = _postShaderProgram->getUniformLocation("gOffset");
     _postShaderUniformLocations.bOffset = _postShaderProgram->getUniformLocation("bOffset");
+    _postShaderUniformLocations.rNoise = _postShaderProgram->getUniformLocation("rNoise");
+    _postShaderUniformLocations.gNoise = _postShaderProgram->getUniformLocation("gNoise");
+    _postShaderUniformLocations.bNoise = _postShaderProgram->getUniformLocation("bNoise");
 
     // Debug: print uniform locations to verify they're valid
     fprintf(stdout, "[DEBUG] Post shader uniforms - sceneTexture: %d, rOffset: %d, gOffset: %d, bOffset: %d\n",
@@ -1139,7 +1142,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
     // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
     // Chromatic aberration offsets (0.01 - 0.03 for subtle, higher for dramatic)
-    float aberrationStrength = 0.02f;
 
     // Bind default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1158,6 +1160,9 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     glUniform2f(_postShaderUniformLocations.rOffset, aberrationStrength, 0.0f);
     glUniform2f(_postShaderUniformLocations.gOffset, 0.0f, 0.0f);
     glUniform2f(_postShaderUniformLocations.bOffset, -aberrationStrength, 0.0f);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.rNoise, rNoise);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.gNoise, gNoise);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.bNoise, bNoise);
 
     // Draw fullscreen quad
     glBindVertexArray(_quadVAO);
@@ -1461,6 +1466,11 @@ void FPEngine::_updateScene() {
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightDirection, spotLightDirection);
   }
+    float enemyDistance = _getEnemyDistance();
+    aberrationStrength = std::max(0.0f,0.05f-enemyDistance/400);
+    rNoise = aberrationStrength;
+    gNoise = 0 + (float)rand()/((float)RAND_MAX/(aberrationStrength*5));
+    bNoise = 0 + (float)rand()/((float)RAND_MAX/(aberrationStrength*5));
 }
 
 void FPEngine::run() {
@@ -1583,6 +1593,28 @@ glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
 
   return correctedPos;
 }
+
+float FPEngine::_getEnemyDistance() {
+    std::vector<glm::vec3> enemies;
+    enemies.push_back(_pFarina->getPosition());
+    enemies.push_back(_pWilfred->getPosition());
+    enemies.push_back(_pEnemyElster->getPosition());
+    enemies.push_back(_pTympanius->getPosition());
+    glm::vec3 enemy = enemies.at(0);
+    glm::vec3 cam = _cam->getPosition();
+    double smallestDist = sqrt(pow(enemy.x-cam.x, 2) +pow(enemy.y-cam.y, 2) +pow(enemy.z-cam.z, 2));
+    std::cout << smallestDist << std::endl;
+    for (int i=0; i<enemies.size(); i++) {
+        enemy = enemies.at(i);
+        double currDist = sqrt(pow(enemy.x-cam.x, 2) +pow(enemy.y-cam.y, 2) +pow(enemy.z-cam.z, 2));
+        if (currDist<smallestDist) {
+            smallestDist = currDist;
+        }
+        std::cout << "run " << i;
+    }
+    return smallestDist;
+}
+
 
 float FPEngine::_getObjectHeightAt(float x, float z) const {
   const float CHARACTER_RADIUS =

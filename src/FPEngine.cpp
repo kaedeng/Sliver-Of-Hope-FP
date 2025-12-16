@@ -28,7 +28,7 @@ FPEngine::FPEngine()
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0){
+      _characterDead(false), _particleSystem(nullptr){
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -48,16 +48,6 @@ FPEngine::~FPEngine() {
   delete _pSkybox;
   delete _spriteShaderProgram;
   delete _particleSystem;
-
-  for (auto enemy : _enemies) {
-    delete enemy;
-  }
-  _enemies.clear();
-
-  for (auto coin : _coins) {
-    delete coin;
-  }
-  _coins.clear();
 }
 
 void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
@@ -402,10 +392,6 @@ void FPEngine::mSetupTextures() {
       _loadAndRegisterTexture("./assets/textures/floor.png");
   _texHandles[TEXTURE_ID::WALL] = 
       _loadAndRegisterTexture("./assets/textures/bricks.png");
-  _texHandles[TEXTURE_ID::ENEMY] =
-      _loadAndRegisterTexture("assets/textures/goomba.png");
-  _texHandles[TEXTURE_ID::COIN] =
-      _loadAndRegisterTexture("assets/textures/coin.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
       _loadAndRegisterTexture("assets/textures/blood.png");
 }
@@ -507,7 +493,7 @@ void FPEngine::mSetupScene() {
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
-  _pCharacter->setPosition(glm::vec3(70.0f, _getTerrainHeight(20.0f, 0.0f), 0.0f));
+  _pCharacter->setPosition(glm::vec3(70.0f, _getTerrainHeight(68.0f, 0.0f), 0.0f));
 
   _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
   _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
@@ -543,15 +529,6 @@ void FPEngine::mSetupScene() {
                     _elsterShaderUniformLocations.materialSpecular,
                     _elsterShaderUniformLocations.materialShininess);
 
-  // Farina
-  _pFarina = new Farina(_textureShaderProgram->getShaderProgramHandle(),
-                        _textureShaderUniformLocations.mvpMatrix,
-                        _textureShaderUniformLocations.materialColor,
-                        _textureShaderUniformLocations.normalMatrix,
-                        _textureShaderUniformLocations.modelMatrix);
-
-  _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
-
   if (!_pEnemyElster->loadFromFile(
           "./assets/models/heroes/Elster/elster.glb")) {
     fprintf(stderr, "Failed to load enemy Elster model\n");
@@ -566,18 +543,26 @@ void FPEngine::mSetupScene() {
 
   // enemy elster to use walking animation
   _pEnemyElster->playAnimation("elsterWalking");
+  
+  // Farina
+  _pFarina = new Farina(_textureShaderProgram->getShaderProgramHandle(),
+                        _textureShaderUniformLocations.mvpMatrix,
+                        _textureShaderUniformLocations.materialColor,
+                        _textureShaderUniformLocations.normalMatrix,
+                        _textureShaderUniformLocations.modelMatrix);
+
+  _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
+
+  _enemies.push_back(_pTympanius);
+  _enemies.push_back(_pWilfred);
+  _enemies.push_back(_pEnemyElster);
+  _enemies.push_back(_pFarina);
 
   // Set lighting parameters
   _setLightingParameters();
 
   // Initialize particle system
   _particleSystem = new ParticleSystem();
-
-  // Spawn enemies
-  _spawnEnemies(0); // Spawn 10 enemies
-
-  // Spawn coins at corners
-  _spawnCoins();
 }
 
 void FPEngine::_setLightingParameters() {
@@ -749,92 +734,6 @@ void FPEngine::_generateEnvironment() {
     } else {
         std::cerr << "Unable to open file" << std::endl;
     }
-
-  // psych! everything's on a grid.
-  for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) {
-    for (int j = BOTTOM_END_POINT; j < TOP_END_POINT;
-         j += GRID_SPACING_LENGTH) {
-      // don't just draw a tree ANYWHERE.
-      if (getRand() < 0.1f) {
-        // Calculate distance from center
-        float distFromCenterX = abs(i);
-        float distFromCenterZ = abs(j);
-
-        // Skip too close to spawn
-        if (distFromCenterX < 10.0f && distFromCenterZ < 10.0f) {
-          continue;
-        }
-
-        // Skip too close to coin
-        bool nearCoin = false;
-        for (const auto &corner : coinCorners) {
-          float distToCoin = glm::length(glm::vec2(i, j) - corner);
-          if (distToCoin < 10.0f) {
-            nearCoin = true;
-            break;
-          }
-        }
-        if (nearCoin) {
-          continue;
-        }
-
-        // if (getRand() < 0.5f) {
-        //   BushData bush;
-        //   bush.size = 2.0f;
-        //   float bushX = i + getRand() - 2;
-        //   float bushZ = j + getRand() - 2;
-        //   float terrainY = _getTerrainHeight(bushX, bushZ);
-        //   // bush sits on the terrain
-        //   bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
-        //   bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
-        //                          0.588 + (getRand() - 2) * 0.15,
-        //                          0.455 + (getRand() - 2) * 0.15);
-        //   _bushes.push_back(bush);
-        //   continue;
-        // }
-
-        // translate to spot
-        float treeX = i + getRand() - 2;
-        float treeZ = j + getRand() - 2;
-        float terrainY = _getTerrainHeight(treeX, treeZ);
-
-        // compute random height
-        GLdouble height = powf(getRand(), 2.5) * 15 + 10;
-
-        // need to place it at terrain height
-        // and scale it to the desired height
-        glm::mat4 transToSpotMtx =
-            glm::translate(glm::mat4(1.0), glm::vec3(treeX, terrainY, treeZ));
-        glm::mat4 scaleToHeightMtx =
-            glm::scale(glm::mat4(1.0), glm::vec3(1, height, 1));
-
-        // translate up to position leaves at top of trunk
-        glm::mat4 transToHeight =
-            glm::translate(glm::mat4(1.0), glm::vec3(0, height * 0.2f, 0));
-
-        // compute full model matrix
-        glm::mat4 leavesModelMatrix =
-            transToHeight * scaleToHeightMtx * transToSpotMtx;
-        glm::mat4 trunkModelMatrix = scaleToHeightMtx * transToSpotMtx;
-
-        // compute random colors
-        glm::vec3 color(0.086 + (getRand() - 2) * 0.15,
-                        0.588 + (getRand() - 2) * 0.15,
-                        0.455 + (getRand() - 2) * 0.15);
-        glm::vec3 barkColor(0.49 + (getRand() - 2) * 0.1,
-                            0.439 + (getRand() - 2) * 0.1,
-                            0.251 + (getRand() - 2) * 0.1);
-
-        // get random offset for the swaying
-        float frameOffset(getRand() * M_PI);
-
-        // store tree properties
-        TreeData currentTree = {leavesModelMatrix, trunkModelMatrix, color,
-                                barkColor, frameOffset};
-        _trees.emplace_back(currentTree);
-      }
-    }
-  }
 }
 
 void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
@@ -986,16 +885,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       _pTympanius->draw(glm::mat4(1.0f), viewMtx, projMtx);
     }
 
-  // coins
-  for (auto coin : _coins) {
-    if (!coin->isCollected()) {
-      coin->draw(_spriteShaderProgram->getShaderProgramHandle(),
-                 _spriteShaderUniformLocations.mvpMatrix,
-                 _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
-                 _texHandles[TEXTURE_ID::COIN]);
-    }
-  }
-
   // particles
   _particleSystem->draw(_spriteShaderProgram->getShaderProgramHandle(),
                         _spriteShaderUniformLocations.mvpMatrix,
@@ -1052,13 +941,6 @@ void FPEngine::_updateScene() {
       if (_keys[GLFW_KEY_D]) {
         _pCharacter->turnRight(_characterTurnSpeed * deltaTime);
       }
-    }
-
-    // Handle jumping with spacebar
-    if (_keys[GLFW_KEY_SPACE] && _characterOnGround) {
-      const float jumpVelocity = 15.0f; // Initial upward velocity for jump
-      _characterVerticalVelocity = jumpVelocity;
-      _characterOnGround = false;
     }
 
     if (moved) {
@@ -1136,8 +1018,7 @@ void FPEngine::_updateScene() {
       if (charPos.y < -50.0f && !_characterDead) {
         _characterDead = true;
         _particleSystem->spawnBurst(charPos, 30);
-        fprintf(stdout, "[INFO]: Player fell off the edge! RIP!\n");
-        fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+        fprintf(stdout, "[INFO]: Player fell off the world! Ooops my bad.\n");
       }
     }
 
@@ -1157,10 +1038,10 @@ void FPEngine::_updateScene() {
   glm::vec3 newTympaniusPos = _checkAndResolveCollisions(tympaniusPos, _pTympanius->getRadius());
   _pTympanius->setPosition(newTympaniusPos);
 
-    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-    glm::vec3 wilfPos = _pWilfred->getPosition();
-    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
-    _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
+  _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 wilfPos = _pWilfred->getPosition();
+  glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+  _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
 
   // update enemy elster
   _pEnemyElster->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
@@ -1186,53 +1067,12 @@ void FPEngine::_updateScene() {
 
   _pFarina->setPosition(newFarinaPos);
 
-  for (auto enemy : _enemies) {
-    if (enemy->isAlive() && !enemy->isFalling()) {
-      enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-
-      // Check if enemy has fallen off the world
-      glm::vec3 enemyPos = enemy->getPosition();
-
-      // Apply collision detection with bushes
-      const float ENEMY_RADIUS = enemy->getRadius();
-      enemyPos = _checkAndResolveCollisions(enemyPos, ENEMY_RADIUS);
-
-      float terrainHeight = _getTerrainHeight(enemyPos.x, enemyPos.z);
-
-      if (terrainHeight < -500.0f) {
-        // Enemy is off the edge, start falling and spawn particles
-        enemy->setFalling(true);
-        _particleSystem->spawnBurst(enemyPos, 15);
-        fprintf(stdout, "[INFO]: Enemy fell off the edge!\n");
-      } else if (!enemy->isFalling()) {
-        // Keep enemy on terrain
-        enemyPos.y = terrainHeight + 1.0f;
-        enemy->setPosition(enemyPos);
-      }
-    } else if (enemy->isFalling()) {
-      // Update falling enemy
-      enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-
-      // if it has fallen too far spawn final rings and kill the thing
-      if (enemy->getPosition().y < -50.0f && enemy->isAlive()) {
-        enemy->setAlive(false);
-        _particleSystem->spawnBurst(enemy->getPosition(), 10);
-      }
-    }
-  }
-
-  // Update coins
-  for (auto coin : _coins) {
-    coin->update(deltaTime);
-  }
-
   // Update particle system
   _particleSystem->update(deltaTime);
 
   // Check collisions
   _checkEnemyCollisions();
   _checkPlayerEnemyCollision();
-  _checkCoinCollection();
 
   // Update camera to follow character
   if (_cam == _arcBallCam) {
@@ -1243,7 +1083,7 @@ void FPEngine::_updateScene() {
     glm::vec3 spotLightPosition;
     glm::vec3 spotLightDirection;
     if(!_characterDead){  
-      const float EYE_HEIGHT = 4.0f; // TODO: find a better height i just placed it
+      const float EYE_HEIGHT = 4.0f;
       glm::vec3 characterPos = _pCharacter->getPosition();
       glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
 
@@ -1262,19 +1102,23 @@ void FPEngine::_updateScene() {
     }
     else{
       glm::vec3 cameraPos = _firstPersonCam->getPosition();
-      if (cameraPos.y > _pEnemyElster->getPosition().y+0.8f){ // Death Falling animation
-        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y-7.0f*deltaTime, cameraPos.z));
+      if (cameraPos.y > _pEnemyElster->getPosition().y+1.2f){ // Death Falling animation
+        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y-2.5f*deltaTime, cameraPos.z));
       }
       switch (_enemyThatKilled){
         case 0: // Tympanius
           _firstPersonCam->setLookAtPoint(_pTympanius->getPosition());
           break;
-        case 1: // Wilfred
-          _firstPersonCam->setLookAtPoint(_pWilfred->getPosition());
+        case 1: {// Wilfred
+          glm::vec3 wilfred_Pos = _pWilfred->getPosition();
+          _firstPersonCam->setLookAtPoint(glm::vec3(wilfred_Pos.x, wilfred_Pos.y+2.5f, wilfred_Pos.z));
           break;
-        case 2: // Enemy Elster
-          _firstPersonCam->setLookAtPoint(_pEnemyElster->getPosition());
+        }
+        case 2: { // Enemy Elster
+          glm::vec3 enemyElster_Pos = _pEnemyElster->getPosition();
+          _firstPersonCam->setLookAtPoint(glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+2.5f, enemyElster_Pos.z));
           break;
+        }
         case 3: // Farina
           _firstPersonCam->setLookAtPoint(_pFarina->getPosition());
           break;
@@ -1383,38 +1227,29 @@ float FPEngine::_getTerrainHeight(float x, float z) const {
 glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
                                                float characterRadius) const {
   glm::vec3 correctedPos = position;
-  const float characterHeight = 1.0f;
+  glm::vec2 charPosXZ = glm::vec2(position.x, position.z);
+  characterRadius += 2.0f;
 
   // Check collision with bushes
   for (const auto &bush : _bushes) {
     glm::vec3 bushCenter = bush.position;
     float bushRadius = bush.size;
+    float extent = bushRadius + characterRadius;
 
-    // Check vertical overlap first
-    float bushBottom = bushCenter.y - bushRadius;
-    float bushTop = bushCenter.y + bushRadius;
-    float charBottom = correctedPos.y;
-    float charTop = correctedPos.y + characterHeight;
+    float dx = correctedPos.x - bushCenter.x;
+    float dz = correctedPos.z - bushCenter.z;
 
-    // Only check horizontal collision if theres vertical overlap
-    bool verticalOverlap = (charBottom < bushTop) && (charTop > bushBottom);
+    float overlapX = extent - std::abs(dx);
+    float overlapZ = extent - std::abs(dz);
 
-    if (verticalOverlap) {
-      // Calculate 2D distance
-      glm::vec2 charPosXZ(correctedPos.x, correctedPos.z);
-      glm::vec2 bushPosXZ(bushCenter.x, bushCenter.z);
-      float distance2D = glm::length(charPosXZ - bushPosXZ);
-      float minDistance = characterRadius + bushRadius;
-
-      // Check if collision occurs
-      if (distance2D < minDistance && distance2D > 0.001f) {
-        // Push character away from bush in XZ plane
-        glm::vec2 pushDirection = glm::normalize(charPosXZ - bushPosXZ);
-        glm::vec2 correction = pushDirection * (minDistance - distance2D);
-        correctedPos.x += correction.x;
-        correctedPos.z += correction.y;
-      }
+    if (overlapX > 0 && overlapZ > 0) {
+        if (overlapX < overlapZ) {
+            correctedPos.x += (dx > 0 ? overlapX : -overlapX);
+        } else {
+            correctedPos.z += (dz > 0 ? overlapZ : -overlapZ);
+        }
     }
+
   }
 
   return correctedPos;
@@ -1488,65 +1323,10 @@ GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
   return textureHandle;
 }
 
-void FPEngine::_spawnEnemies(int numEnemies) {
-  srand(time(0));
-
-  for (int i = 0; i < numEnemies; ++i) {
-    // random position around the world
-    float x = (getRand() - 0.5f) * WORLD_SIZE * 1.5f;
-    float z = (getRand() - 0.5f) * WORLD_SIZE * 1.5f;
-
-    // dont spawn too close to center
-    if (abs(x) < 15.0f && abs(z) < 15.0f) {
-      x += (x > 0 ? 20.0f : -20.0f);
-      z += (z > 0 ? 20.0f : -20.0f);
-    }
-
-    float y = _getTerrainHeight(x, z) + 1.0f;
-
-    // rand heading
-    float heading = getRand() * 2.0f * M_PI;
-
-    Tympanius *enemy = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
-
-    _enemies.push_back(enemy);
-  }
-
-  fprintf(stdout, "[INFO]: Spawned %d enemies\n", numEnemies);
-}
-
-void FPEngine::_spawnCoins() {
-  // spawn 4 coins at the corners of the map
-  const float offset = WORLD_SIZE * 0.8f;
-
-  glm::vec3 corners[4] = {
-      glm::vec3(-offset, 0.0f, -offset), // Bottom left
-      glm::vec3(offset, 0.0f, -offset),  // Bottom right
-      glm::vec3(-offset, 0.0f, offset),  // Top left
-      glm::vec3(offset, 0.0f, offset)    // Top right
-  };
-
-  for (int i = 0; i < 4; ++i) {
-    float terrainY = _getTerrainHeight(corners[i].x, corners[i].z);
-    corners[i].y = terrainY + 2.0f;
-
-    Coin *coin = new Coin(corners[i]);
-    _coins.push_back(coin);
-  }
-
-  fprintf(stdout, "[INFO]: Spawned 4 coins at corners\n");
-}
-
 void FPEngine::_checkEnemyCollisions() {
   // collisions between all enemy pairs
   for (size_t i = 0; i < _enemies.size(); ++i) {
-    if (!_enemies[i]->isAlive() || _enemies[i]->isFalling())
-      continue;
-
     for (size_t j = i + 1; j < _enemies.size(); ++j) {
-      if (!_enemies[j]->isAlive() || _enemies[j]->isFalling())
-        continue;
-
       glm::vec3 pos1 = _enemies[i]->getPosition();
       glm::vec3 pos2 = _enemies[j]->getPosition();
 
@@ -1570,6 +1350,13 @@ void FPEngine::_checkEnemyCollisions() {
   }
 }
 
+void FPEngine::doDeath(const char* killerName, glm::vec3 playerPos){
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 30);
+    fprintf(stdout, "[INFO]: Player caught by %s! Game Over!\n", killerName);
+    fprintf(stdout, "[INFO]: You lasted: %dm %ds\n", static_cast<int>(glfwGetTime())/60, static_cast<int>(glfwGetTime())%60);
+}
+
 void FPEngine::_checkPlayerEnemyCollision() {
   if (_characterDead)
     return;
@@ -1586,12 +1373,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (tympaniusDistance < tympaniusMinDistance &&
       tympaniusVerticalDistance < maxVerticalDistance) {
-    _characterDead = true;
     _enemyThatKilled = 0;
-    _particleSystem->spawnBurst(playerPos, 30);
-    _firstPersonCam->setLookAtPoint(tympaniusPos);
-    fprintf(stdout, "[INFO]: Player hit by Tympanius! Game Over!\n");
-    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    doDeath("Tympanius", playerPos);
     return;
   }
 
@@ -1604,11 +1387,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (wilfredDistance < wilfredMinDistance &&
       wilfredVerticalDistance < maxVerticalDistance) {
-    _characterDead = true;
     _enemyThatKilled = 1;
-    _particleSystem->spawnBurst(playerPos, 30);
-    fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
-    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    doDeath("Wilfred", playerPos);
     return;
   }
 
@@ -1621,11 +1401,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (elsterDistance < elsterMinDistance &&
       elsterVerticalDistance < maxVerticalDistance) {
-    _characterDead = true;
     _enemyThatKilled = 2;
-    _particleSystem->spawnBurst(playerPos, 30);
-    fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
-    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    doDeath("Elster", playerPos);
     return;
   }
 
@@ -1636,67 +1413,9 @@ void FPEngine::_checkPlayerEnemyCollision() {
   float farinaVertDist = abs(playerPos.y - farinaPos.y);
 
   if (farinaDist < farinaMinDist && farinaVertDist < 2.0f) {
-    _characterDead = true;
     _enemyThatKilled = 3;
-    _firstPersonCam->setLookAtPoint(farinaPos);
-    _particleSystem->spawnBurst(playerPos, 30);
+    doDeath("Farina", playerPos);
     return;
-  }
-
-  for (auto enemy : _enemies) {
-    if (!enemy->isAlive() || enemy->isFalling())
-      continue;
-
-    glm::vec3 enemyPos = enemy->getPosition();
-
-    // Check horizontal distance
-    float distance = glm::length(
-        glm::vec2(playerPos.x - enemyPos.x, playerPos.z - enemyPos.z));
-    float minDistance = playerRadius + enemy->getRadius();
-
-    // player must be at roughly same height as enemy
-    float verticalDistance = abs(playerPos.y - enemyPos.y);
-
-    if (distance < minDistance && verticalDistance < maxVerticalDistance) {
-      // player die </3 rip
-      _characterDead = true;
-      _particleSystem->spawnBurst(playerPos, 30);
-      fprintf(stdout, "[INFO]: Player hit by enemy! Game Over!\n");
-      fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
-      return;
-    }
-  }
-}
-
-void FPEngine::_checkCoinCollection() {
-  if (_characterDead)
-    return;
-
-  glm::vec3 playerPos = _pCharacter->getPosition();
-
-  for (auto coin : _coins) {
-    if (coin->isCollected())
-      continue;
-
-    // distance to coin
-    float distance = glm::length(playerPos - coin->getPosition());
-
-    // collection radius
-    const float collectionRadius = 2.5f; // Larger collection radius
-
-    if (distance < collectionRadius) {
-      // Coin collected! hooray! yippee!
-      coin->setCollected(true);
-      _coinsCollected++;
-      _particleSystem->spawnBurst(coin->getPosition(), 15);
-      fprintf(stdout, "[INFO]: Coin collected! (%d / 4)\n", _coinsCollected);
-
-      if (_coinsCollected >= 4) {
-        fprintf(stdout,
-                "[INFO]: All coins collected! You win!\n"); // you get nothing
-                                                            // for winning lol
-      }
-    }
   }
 }
 

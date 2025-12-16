@@ -70,7 +70,7 @@ void ParticleSystem::spawnBurst(const glm::vec3 &position, int numParticles) {
     float angle = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * M_PI;
     float elevation =
         (static_cast<float>(rand()) / RAND_MAX - 0.5f) * M_PI * 0.5f;
-    float speed = 3.0f + (static_cast<float>(rand()) / RAND_MAX) * 5.0f;
+    float speed = 3.0f + (static_cast<float>(rand()) / RAND_MAX) * 3.0f;
 
     particle.velocity =
         glm::vec3(cos(elevation) * cos(angle) * speed,
@@ -78,9 +78,9 @@ void ParticleSystem::spawnBurst(const glm::vec3 &position, int numParticles) {
                   cos(elevation) * sin(angle) * speed);
 
     particle.maxLifetime =
-        1.0f + (static_cast<float>(rand()) / RAND_MAX) * 1.0f;
+        2.0f + (static_cast<float>(rand()) / RAND_MAX) * 3.0f;
     particle.lifetime = particle.maxLifetime;
-    particle.size = 0.3f + (static_cast<float>(rand()) / RAND_MAX) * 0.3f;
+    particle.size = 0.7f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
     particle.rotation = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * M_PI;
     particle.rotationSpeed =
         ((static_cast<float>(rand()) / RAND_MAX) - 0.5f) * 10.0f;
@@ -91,7 +91,7 @@ void ParticleSystem::spawnBurst(const glm::vec3 &position, int numParticles) {
 }
 
 void ParticleSystem::update(float deltaTime) {
-  const float gravity = -20.0f;
+  const float gravity = -10.0f;
 
   for (auto &particle : _particles) {
     if (!particle.active)

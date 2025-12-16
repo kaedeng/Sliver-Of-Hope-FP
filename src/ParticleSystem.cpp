@@ -80,7 +80,7 @@ void ParticleSystem::spawnBurst(const glm::vec3 &position, int numParticles) {
     particle.maxLifetime =
         2.0f + (static_cast<float>(rand()) / RAND_MAX) * 3.0f;
     particle.lifetime = particle.maxLifetime;
-    particle.size = 0.7f + (static_cast<float>(rand()) / RAND_MAX) * 0.7f;
+    particle.size = 0.7f + (static_cast<float>(rand()) / RAND_MAX) * 0.8f;
     particle.rotation = (static_cast<float>(rand()) / RAND_MAX) * 2.0f * M_PI;
     particle.rotationSpeed =
         ((static_cast<float>(rand()) / RAND_MAX) - 0.5f) * 10.0f;

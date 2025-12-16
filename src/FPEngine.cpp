@@ -1116,7 +1116,7 @@ void FPEngine::_updateScene() {
         }
         case 2: { // Enemy Elster
           glm::vec3 enemyElster_Pos = _pEnemyElster->getPosition();
-          _firstPersonCam->setLookAtPoint(glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+2.5f, enemyElster_Pos.z));
+          _firstPersonCam->setLookAtPoint(glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+1.5f, enemyElster_Pos.z));
           break;
         }
         case 3: // Farina
@@ -1352,7 +1352,7 @@ void FPEngine::_checkEnemyCollisions() {
 
 void FPEngine::doDeath(const char* killerName, glm::vec3 playerPos){
     _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 30);
+    _particleSystem->spawnBurst(playerPos, 60);
     fprintf(stdout, "[INFO]: Player caught by %s! Game Over!\n", killerName);
     fprintf(stdout, "[INFO]: You lasted: %dm %ds\n", static_cast<int>(glfwGetTime())/60, static_cast<int>(glfwGetTime())%60);
 }

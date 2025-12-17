@@ -157,6 +157,8 @@ private:
   };
   std::vector<BushData> _bushes;
 
+  GLuint _postFBO;
+  GLuint _postTextureID;
   GLuint _quadVAO;
   GLuint _quadVBO;
   GLuint _quadIBO;

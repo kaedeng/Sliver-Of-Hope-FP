@@ -1448,14 +1448,12 @@ float FPEngine::_getEnemyDistance() {
     glm::vec3 enemy = enemies.at(0);
     glm::vec3 cam = _cam->getPosition();
     double smallestDist = sqrt(pow(enemy.x-cam.x, 2) +pow(enemy.y-cam.y, 2) +pow(enemy.z-cam.z, 2));
-    std::cout << smallestDist << std::endl;
     for (int i=0; i<enemies.size(); i++) {
         enemy = enemies.at(i);
         double currDist = sqrt(pow(enemy.x-cam.x, 2) +pow(enemy.y-cam.y, 2) +pow(enemy.z-cam.z, 2));
         if (currDist<smallestDist) {
             smallestDist = currDist;
         }
-        std::cout << "run " << i;
     }
     return smallestDist;
 }

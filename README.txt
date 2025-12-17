@@ -31,6 +31,9 @@ To run the program, run "./FP"
 
 On Windows: Update CMakeLists.txt to your include directory.
 
+Description of file input:
+used a map.txt to describe the map input
+
 Distribution of responsibilities:
 Marina: Implemented Farina enemy code, Implemented Bezier Curve with arc length parameterization, refactoring.
 James: Implemented Wilfred enemy code, spotlight, hand animation, wall collision, chromatic aberration.

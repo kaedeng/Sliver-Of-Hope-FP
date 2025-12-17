@@ -1010,6 +1010,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
     _pCharacter->draw(glm::mat4(1.0f), viewMtx, projMtx);
   } else if (!_characterDead && _cam == _firstPersonCam) {
+      // lowkenuinely give this guy a hand
       _pCharacter->drawArm(_spriteShaderProgram->getShaderProgramHandle(),
                         _spriteShaderUniformLocations.mvpMatrix,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,

@@ -146,16 +146,15 @@ private:
   /// \desc the number of points that make up our ground object
   GLsizei _numGroundPoints;
 
-  struct BushVertexData {
+  struct WallVertexData {
     glm::vec3 position;
     glm::vec2 texCoords;
   };
-  struct BushData {
+  struct WallData {
     glm::vec3 position;
-    glm::vec3 color;
     GLfloat size;
   };
-  std::vector<BushData> _bushes;
+  std::vector<WallData> _walls;
 
   GLuint _postFBO;
   GLuint _postTextureID;

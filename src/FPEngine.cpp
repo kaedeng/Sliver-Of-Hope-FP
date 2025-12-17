@@ -791,7 +791,7 @@ void FPEngine::_generateEnvironment() {
   const glm::vec2 coinCorners[4] = {
       glm::vec2(-coinOffset, -coinOffset), glm::vec2(coinOffset, -coinOffset),
       glm::vec2(-coinOffset, coinOffset), glm::vec2(coinOffset, coinOffset)};
-    // read in map file for bushes
+    // read in map file for walls
     std::string line;
     std::string square;
     // open file
@@ -809,17 +809,14 @@ void FPEngine::_generateEnvironment() {
             while (lineStream >> square) {
                 if (square == "x") {
                     // put a wall here
-                    BushData bush;
-                    bush.size = width/2;
-                    float bushX = LEFT_END_POINT+(col*width);
-                    float bushZ = BOTTOM_END_POINT+(row*height);
-                    float terrainY = _getTerrainHeight(bushX, bushZ);
-                    // bush sits on the terrain
-                    bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
-                    bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
-                                           0.588 + (getRand() - 2) * 0.15,
-                                           0.455 + (getRand() - 2) * 0.15);
-                    _bushes.push_back(bush);
+                    WallData wall;
+                    wall.size = width/2;
+                    float wallX = LEFT_END_POINT+(col*width);
+                    float wallZ = BOTTOM_END_POINT+(row*height);
+                    float terrainY = _getTerrainHeight(wallX, wallZ);
+                    // wall sits on the terrain
+                    wall.position = glm::vec3(wallX, terrainY + wall.size, wallZ);
+                    _walls.push_back(wall);
                 }
                 col++;
             }
@@ -985,19 +982,19 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
     glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
-  for (const auto &bush : _bushes) {
-    glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*4.0f, bush.size));
-    glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
-    const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(bushModelMtx)));
+  for (const auto &wall : _walls) {
+    glm::mat4 wallModelMtx = glm::translate(glm::mat4(1.0f), wall.position);
+    wallModelMtx = glm::scale(wallModelMtx, glm::vec3(wall.size, wall.size*4.0f, wall.size));
+    glm::mat4 TmvpMtx = projMtx * viewMtx * wallModelMtx;
+    const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(wallModelMtx)));
 
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
-    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.modelMatrix, bushModelMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.modelMatrix, wallModelMtx);
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.normalMatrix, normalMtx);
     
     
     //_lightingShaderProgram->setProgramUniform(
-        //_lightingShaderUniformLocations.materialColor, bush.color);
+        //_lightingShaderUniformLocations.materialColor, wall.color);
 
       CSCI441::drawSolidCubeTextured(2.0f);
   }
@@ -1412,16 +1409,16 @@ glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
                                                float characterRadius) const {
   glm::vec3 correctedPos = position;
   glm::vec2 charPosXZ = glm::vec2(position.x, position.z);
-  characterRadius += 2.0f;
+  // characterRadius += 1.0f;
 
-  // Check collision with bushes
-  for (const auto &bush : _bushes) {
-    glm::vec3 bushCenter = bush.position;
-    float bushRadius = bush.size;
-    float extent = bushRadius + characterRadius;
+  // Check collision with walls
+  for (const auto &wall : _walls) {
+    glm::vec3 wallCenter = wall.position;
+    float wallRadius = wall.size;
+    float extent = wallRadius + characterRadius;
 
-    float dx = correctedPos.x - bushCenter.x;
-    float dz = correctedPos.z - bushCenter.z;
+    float dx = correctedPos.x - wallCenter.x;
+    float dz = correctedPos.z - wallCenter.z;
 
     float overlapX = extent - std::abs(dx);
     float overlapZ = extent - std::abs(dz);
@@ -1463,16 +1460,16 @@ float FPEngine::_getObjectHeightAt(float x, float z) const {
   const float CHARACTER_RADIUS =
       0.5f; // Match this with character collision radius
 
-  // treat bushes as having a flat top for landing
-  for (const auto &bush : _bushes) {
+  // treat walls as having a flat top for landing
+  for (const auto &wall : _walls) {
     glm::vec2 charPosXZ(x, z);
-    glm::vec2 bushPosXZ(bush.position.x, bush.position.z);
-    float distance = glm::length(charPosXZ - bushPosXZ);
-    float bushRadius = bush.size;
+    glm::vec2 wallPosXZ(wall.position.x, wall.position.z);
+    float distance = glm::length(charPosXZ - wallPosXZ);
+    float wallRadius = wall.size;
 
-    if (distance < bushRadius * 1.2f) {
-      // Return the top of the bush
-      return bush.position.y + bushRadius;
+    if (distance < wallRadius * 1.2f) {
+      // Return the top of the wall
+      return wall.position.y + wallRadius;
     }
   }
 

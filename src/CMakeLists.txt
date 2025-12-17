@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(FP)
 set(CMAKE_CXX_STANDARD 17)
-set(SOURCE_FILES main.cpp FPEngine.cpp FPEngine.h ArcballCam.cpp ArcballCam.hpp Character.h Character.cpp Skybox.cpp Skybox.h Enemy.cpp Enemy.h ParticleSystem.cpp ParticleSystem.h Wilfred.cpp Wilfred.h Farina.cpp Farina.h Tympanius.cpp Tympanius.h TympaniusShaderAttributeLocations.hpp TympaniusShaderUniformLocations.hpp)
+set(SOURCE_FILES main.cpp FPEngine.cpp FPEngine.h ArcballCam.cpp ArcballCam.hpp Character.h Character.cpp Skybox.cpp Skybox.h Enemy.cpp Enemy.h ParticleSystem.cpp ParticleSystem.h Wilfred.cpp Wilfred.h Farina.cpp Farina.h Tympanius.cpp Tympanius.h KillerBall.cpp KillerBall.h TympaniusShaderAttributeLocations.hpp TympaniusShaderUniformLocations.hpp)
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
 # Windows with MinGW Installations

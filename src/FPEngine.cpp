@@ -243,6 +243,14 @@ void FPEngine::mSetupShaders() {
       _elsterShaderProgram->getUniformLocation("useSkinning");
   _elsterShaderUniformLocations.jointMatrices =
       _elsterShaderProgram->getUniformLocation("jointMatrices");
+  // Eye light uniforms
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    std::string uniformName = "eyeLightPositions[" + std::to_string(i) + "]";
+    _elsterShaderUniformLocations.eyeLightPositions[i] =
+        _elsterShaderProgram->getUniformLocation(uniformName.c_str());
+  }
+  _elsterShaderUniformLocations.eyeLightColor =
+      _elsterShaderProgram->getUniformLocation("eyeLightColor");
 
   // get attribute locations
   _elsterShaderAttributeLocations.vPos =
@@ -293,6 +301,14 @@ void FPEngine::mSetupShaders() {
       _tympaniusShaderProgram->getUniformLocation("textureMap");
   _tympaniusShaderUniformLocations.isTextured =
       _tympaniusShaderProgram->getUniformLocation("isTextured");
+  // Eye light uniforms
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    std::string uniformName = "eyeLightPositions[" + std::to_string(i) + "]";
+    _tympaniusShaderUniformLocations.eyeLightPositions[i] =
+        _tympaniusShaderProgram->getUniformLocation(uniformName.c_str());
+  }
+  _tympaniusShaderUniformLocations.eyeLightColor =
+      _tympaniusShaderProgram->getUniformLocation("eyeLightColor");
 
   // Set Attribute Locations
   _tympaniusShaderAttributeLocations.vPos =
@@ -336,6 +352,13 @@ void FPEngine::mSetupShaders() {
       _groundTessShaderProgram->getUniformLocation("spotLightColor");
   _groundTessShaderUniformLocations.cameraPosition =
       _groundTessShaderProgram->getUniformLocation("cameraPosition");
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    std::string uniformName = "eyeLightPositions[" + std::to_string(i) + "]";
+    _groundTessShaderUniformLocations.eyeLightPositions[i] =
+        _groundTessShaderProgram->getUniformLocation(uniformName.c_str());
+  }
+  _groundTessShaderUniformLocations.eyeLightColor =
+      _groundTessShaderProgram->getUniformLocation("eyeLightColor");
 
   // get attribute locations for ground tess shader
   _groundTessShaderAttributeLocations.vPos =
@@ -402,9 +425,16 @@ void FPEngine::mSetupShaders() {
       _textureShaderProgram->getUniformLocation("materialColor");
    _textureShaderUniformLocations.isTextured =
       _textureShaderProgram->getUniformLocation("isTextured");
+  // Eye light uniforms
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    std::string uniformName = "eyeLightPositions[" + std::to_string(i) + "]";
+    _textureShaderUniformLocations.eyeLightPositions[i] =
+        _textureShaderProgram->getUniformLocation(uniformName.c_str());
+  }
+  _textureShaderUniformLocations.eyeLightColor =
+      _textureShaderProgram->getUniformLocation("eyeLightColor");
 
     // set static uniforms
-    // TODO #13 - set uniform
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.texMap, 0);
 
     _textureShaderAttributeLocations.vPos =
@@ -1270,6 +1300,9 @@ void FPEngine::_updateScene() {
 
   _pFarina->setPosition(newFarinaPos);
 
+  // Update eye light positions for all enemies
+  _updateEyeLightPositions();
+
   // Update particle system
   _particleSystem->update(deltaTime);
 
@@ -1525,6 +1558,85 @@ void FPEngine::_computeAndSendMatrixUniforms(const glm::mat4 &modelMtx,
       _textureShaderUniformLocations.normalMatrix, normalMtx);
   _textureShaderProgram->setProgramUniform(
       _textureShaderUniformLocations.modelMatrix, modelMtx);
+}
+
+void FPEngine::_updateEyeLightPositions() {
+  // Hardcoded eye offsets
+  const float eyeHeightOffset = 1.5f;
+  const float eyeLateralOffset = 0.15f;  // distance between eyes
+  const float eyeForwardOffset = 1.0f;   // how far forward from center
+
+  glm::vec3 eyePositions[NUM_EYE_LIGHTS];
+
+  // tympanius (0, 1)
+  {
+    glm::vec3 pos = _pTympanius->getPosition();
+    glm::vec3 heading = glm::normalize(_pTympanius->getHeading());
+    glm::vec3 right = glm::normalize(glm::cross(heading, glm::vec3(0, 1, 0)));
+
+    glm::vec3 eyeBase = pos + glm::vec3(0, eyeHeightOffset + 1.0f, 0) + heading * eyeForwardOffset;
+    eyePositions[0] = eyeBase + right * eyeLateralOffset;  // Right eye
+    eyePositions[1] = eyeBase - right * eyeLateralOffset;  // Left eye
+  }
+
+  // wilfred (2, 3)
+  {
+    glm::vec3 pos = _pWilfred->getPosition();
+    float angle = _pWilfred->getAngle();
+    glm::vec3 heading = glm::vec3(sin(angle), 0, cos(angle));
+    glm::vec3 right = glm::normalize(glm::cross(heading, glm::vec3(0, 1, 0)));
+
+    glm::vec3 eyeBase = pos + glm::vec3(0, eyeHeightOffset + 2.0f, 0) + heading * eyeForwardOffset;
+    eyePositions[2] = eyeBase + right * eyeLateralOffset;
+    eyePositions[3] = eyeBase - right * eyeLateralOffset;
+  }
+
+  // Evil Elster (4, 5)
+  {
+    glm::vec3 pos = _pEnemyElster->getPosition();
+    float headingAngle = _pEnemyElster->getHeading();
+    glm::vec3 heading = glm::vec3(sin(headingAngle), 0, cos(headingAngle));
+    glm::vec3 right = glm::normalize(glm::cross(heading, glm::vec3(0, 1, 0)));
+
+    glm::vec3 eyeBase = pos + glm::vec3(0, eyeHeightOffset + 3.0f, 0) + heading * eyeForwardOffset;
+    eyePositions[4] = eyeBase + right * eyeLateralOffset;
+    eyePositions[5] = eyeBase - right * eyeLateralOffset;
+  }
+
+  // Farina (6, 7) lol 67
+  {
+    glm::vec3 pos = _pFarina->getPosition();
+    glm::vec3 heading = glm::normalize(_pFarina->getHeading());
+    glm::vec3 right = glm::normalize(glm::cross(heading, glm::vec3(0, 1, 0)));
+
+    glm::vec3 eyeBase = pos + glm::vec3(0, eyeHeightOffset, 0) + heading * eyeForwardOffset;
+    eyePositions[6] = eyeBase + right * eyeLateralOffset;
+    eyePositions[7] = eyeBase - right * eyeLateralOffset;
+  }
+
+  // send eye positions to elster shader
+  _elsterShaderProgram->useProgram();
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    glUniform3fv(_elsterShaderUniformLocations.eyeLightPositions[i], 1, glm::value_ptr(eyePositions[i]));
+  }
+
+  // send eye positions to tympanius shader
+  _tympaniusShaderProgram->useProgram();
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    glUniform3fv(_tympaniusShaderUniformLocations.eyeLightPositions[i], 1, glm::value_ptr(eyePositions[i]));
+  }
+
+  // send eye positions to wilfred and farina shader
+  _textureShaderProgram->useProgram();
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    glUniform3fv(_textureShaderUniformLocations.eyeLightPositions[i], 1, glm::value_ptr(eyePositions[i]));
+  }
+
+  // send eye positions to ground shader
+  _groundTessShaderProgram->useProgram();
+  for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+    glUniform3fv(_groundTessShaderUniformLocations.eyeLightPositions[i], 1, glm::value_ptr(eyePositions[i]));
+  }
 }
 
 float FPEngine::_getTerrainHeight(float x, float z) const {

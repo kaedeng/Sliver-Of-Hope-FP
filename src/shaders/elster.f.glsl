@@ -20,6 +20,11 @@ uniform float materialShininess;
 
 uniform vec3 ambientLight = vec3(0.0, 0.0, 0.0);
 
+// Enemy eye lights for reflecting on stuff
+const int NUM_EYE_LIGHTS = 8;
+uniform vec3 eyeLightPositions[NUM_EYE_LIGHTS];
+uniform vec3 eyeLightColor = vec3(1.0, 0.0, 0.0); // Red glow
+
 // Texture properties
 uniform bool useTexture = false;
 uniform sampler2D materialTexture;
@@ -97,7 +102,27 @@ void main() {
 
         vec3 spotColor = (spotDiffuse+3*spotSpecular)*intensity*attenuation;
 
-    vec3 finalColor = ambient + dirColor + 1.5f*pointColor + 1.5f*spotColor;
+    // red glowing eyes on enemies
+    vec3 eyeLightTotal = vec3(0.0); // color accumulator for just pointlights
+    for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+        vec3 eyeLightDir = normalize(eyeLightPositions[i] - fragPosition);
+
+        // diffuse
+        vec3 eyeDiffuse = max(dot(N, eyeLightDir), 0.0) * eyeLightColor * baseColor;
+
+        // specular
+        vec3 eyeReflectVec = reflect(-eyeLightDir, N);
+        float eyeSpec = pow(max(dot(V, eyeReflectVec), 0.0), 32.0);
+        vec3 eyeSpecular = vec3(0.5) * eyeSpec * eyeLightColor;
+
+        // attenuation
+        float eyeDistance = length(eyeLightPositions[i] - fragPosition);
+        float eyeAttenuation = 1.0 / (1.0 + 0.5 * eyeDistance + 0.3 * (eyeDistance * eyeDistance));
+
+        eyeLightTotal += (eyeDiffuse + eyeSpecular) * eyeAttenuation;
+    }
+
+    vec3 finalColor = ambient + dirColor + 1.5f*pointColor + 1.5f*spotColor + eyeLightTotal;
 
     // return
     fragColorOut = vec4(finalColor, 1.0);

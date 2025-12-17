@@ -186,7 +186,6 @@ private:
   struct TextureShaderUniformLocations {
     /// \desc precomputed MVP matrix location
     GLint mvpMatrix;
-    // TODO #11 - texture map
     GLint texMap;
     GLint spotLightPosition;
     GLint spotLightDirection;
@@ -196,8 +195,11 @@ private:
     GLint cameraPosition;
     GLint materialColor;
     GLint isTextured;
+    GLint eyeLightPositions[8];
+    GLint eyeLightColor;
   } _textureShaderUniformLocations;
 
+  static constexpr int NUM_EYE_LIGHTS = 8; // 2 eyes, 4 enemies
   struct TextureShaderAttributeLocations {
         /// \desc vertex position location
         GLint vPos;
@@ -211,6 +213,7 @@ private:
 
   // Shaders for elster
   CSCI441::ShaderProgram *_elsterShaderProgram;
+
   struct ElsterShaderUniformLocations {
     GLint mvpMatrix;
     GLint normalMatrix;
@@ -230,6 +233,8 @@ private:
     GLint ambientLight;
     GLint useSkinning;
     GLint jointMatrices;
+    GLint eyeLightPositions[NUM_EYE_LIGHTS];
+    GLint eyeLightColor;
   } _elsterShaderUniformLocations;
 
   struct ElsterShaderAttributeLocations {
@@ -263,6 +268,8 @@ private:
     GLint spotLightDirection;
     GLint spotLightColor;
     GLint cameraPosition;
+    GLint eyeLightPositions[8];
+    GLint eyeLightColor;
   } _groundTessShaderUniformLocations;
 
   struct GroundTessShaderAttributeLocations {
@@ -345,6 +352,9 @@ private:
   void _computeAndSendMatrixUniforms(const glm::mat4 &modelMtx,
                                      const glm::mat4 &viewMtx,
                                      const glm::mat4 &projMtx) const;
+
+  // calculates eye light positions for all enemies and sends to shaders
+  void _updateEyeLightPositions();
 };
 
 void mp_engine_keyboard_callback(GLFWwindow *window, int key, int scancode,

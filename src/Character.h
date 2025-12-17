@@ -37,6 +37,12 @@ public:
     
     // draw the character
     void draw(const glm::mat4& modelMtx, const glm::mat4& viewMtx, const glm::mat4& projMtx);
+    void drawArm(GLuint shaderProgramHandle,
+        GLint mvpMatrixLoc,
+        GLint textureLoc,
+        const glm::mat4& viewMtx,
+        const glm::mat4& projMtx,
+        GLuint textureHandle);
     
     // animation control functions
     void playAnimation(const std::string& animationName);
@@ -85,6 +91,16 @@ private:
     float _heading; // rotation around Y axis
     glm::vec3 _headingVector; // normalized direction vector for pathfinding
     float _moveSpeed; // movement speed for enemy AI
+
+    float lastDelt=0;
+
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec2 texCoord;
+    };
+    Vertex _vertices1[6];
+    Vertex _vertices2[6];
+    Vertex _vertices3[6];
     
     // animation states
     struct AnimationState {
@@ -95,6 +111,12 @@ private:
     
     // gltf model data
     tinygltf::Model* _model;
+
+    float armOffset;
+    float animDir;
+
+    GLuint _vao;
+    GLuint _vbo;
     
     // mesh data
     struct Primitive {

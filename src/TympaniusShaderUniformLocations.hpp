@@ -26,6 +26,9 @@ struct TympaniusShaderUniformLocations {
     GLint isTextured;
     GLint textureMap;
 
+    // Eye lights
+    GLint eyeLightPositions[8];
+    GLint eyeLightColor;
 };
 
 #endif

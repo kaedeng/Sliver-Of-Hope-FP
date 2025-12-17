@@ -18,6 +18,10 @@ uniform vec3 spotLightDirection;
 uniform vec3 spotLightColor;
 uniform vec3 cameraPosition;
 
+const int NUM_EYE_LIGHTS = 8;
+uniform vec3 eyeLightPositions[NUM_EYE_LIGHTS];
+uniform vec3 eyeLightColor = vec3(1.0, 0.0, 0.0);
+
 void main() {
     // Sample texture
     vec4 texColor = texture(groundTexture, fragTexCoord);
@@ -76,8 +80,28 @@ void main() {
     // Ambient
     vec3 ambient = vec3(0.0, 0.0, 0.0) * texColor.rgb;
 
+    // red glowing eyes on enemies
+    vec3 eyeLightTotal = vec3(0.0);
+    for (int i = 0; i < NUM_EYE_LIGHTS; i++) {
+        vec3 eyeLightDir = normalize(eyeLightPositions[i] - worldPos);
+
+        // diffuse
+        vec3 eyeDiffuse = max(dot(normal, eyeLightDir), 0.0) * eyeLightColor * texColor.rgb;
+
+        // specular
+        vec3 eyeReflectVec = reflect(-eyeLightDir, normal);
+        float eyeSpec = pow(max(dot(viewVec, eyeReflectVec), 0.0), 32.0);
+        vec3 eyeSpecular = vec3(0.5) * eyeSpec * eyeLightColor;
+
+        // attenuation
+        float eyeDistance = length(eyeLightPositions[i] - worldPos);
+        float eyeAttenuation = 1.0 / (1.0 + 0.5 * eyeDistance + 0.3 * (eyeDistance * eyeDistance));
+
+        eyeLightTotal += (eyeDiffuse + eyeSpecular) * eyeAttenuation;
+    }
+
     // Combine all lighting
-    vec3 finalColor = ambient + dirColor + pointColor + spotColor;
+    vec3 finalColor = ambient + dirColor + pointColor + spotColor + eyeLightTotal;
 
     fragColorOut = vec4(finalColor, texColor.a);
 }

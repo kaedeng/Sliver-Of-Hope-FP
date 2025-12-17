@@ -23,5 +23,5 @@ void main() {
 
     float randomVal = random(fragTexCoord)/2;
 
-    fragColor = vec4((vec3(r, g, b)+vec3(randomVal*rNoise*10))*(1.0f-rNoise*15), 1.0);
+    fragColor = vec4((vec3(r, g, b)+vec3(randomVal*rNoise*20))*(1.0f-rNoise*15), 1.0);
 }

@@ -185,6 +185,7 @@ void FPEngine::mSetupGLFW() {
   glfwSetKeyCallback(mpWindow, mp_engine_keyboard_callback);
   glfwSetMouseButtonCallback(mpWindow, mp_engine_mouse_button_callback);
   glfwSetCursorPosCallback(mpWindow, mp_engine_cursor_callback);
+  glfwSetInputMode(mpWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void FPEngine::mSetupOpenGL() {

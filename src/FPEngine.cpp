@@ -103,6 +103,12 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
 
     case GLFW_KEY_Z:
       _useWintonParticles = !_useWintonParticles;
+      if(_useWintonParticles){
+        std::cout << "[INFO]: Secret Activated. Now die." << std::endl;
+      }
+      else{
+        std::cout << "[INFO]: Secret Deactivated. Now live... ig." << std::endl;
+      }
       break;
 
     default:

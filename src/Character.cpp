@@ -61,8 +61,7 @@ Character::~Character() {
 }
 
 bool Character::loadFromFile(const std::string& filepath) {
-    // Reset stbi flip state to ensure consistent texture loading
-    // (CSCI441::ModelLoader sets this to true which can affect subsequent loads)
+    // Reset stbi flip state
     stbi_set_flip_vertically_on_load(false);
 
     tinygltf::TinyGLTF loader;
@@ -98,7 +97,7 @@ bool Character::loadFromFile(const std::string& filepath) {
     std::cout << "  Animations: " << _animations.size() << std::endl;
     std::cout << "  Materials: " << _materials.size() << std::endl;
     
-    // Start with idle animation
+    // start with idle animation
     if (!_animations.empty()) {
         playAnimation("elsterIdle");
     }
@@ -368,8 +367,6 @@ void Character::_loadAnimations() {
 
         std::cout << "  - Animation: \"" << anim.name << "\"" << std::endl;
 
-        // FIX: Use a map to track channels and filter duplicates
-        // Key: (jointIndex, channelType), Value: channel index
         std::unordered_map<std::string, size_t> channelMap;
         std::vector<AnimationClip::Channel> tempChannels;
 
@@ -645,7 +642,7 @@ void Character::update(float deltaTime) {
     glBindVertexArray(0);
 }
 
-// pathfinding update for enemy AI
+// pathfinding update for enemy 
 void Character::update(float deltaTime, const glm::vec3& targetPosition, float turnSpeed) {
     // move along heading
     _position += _headingVector * _moveSpeed * deltaTime;
@@ -833,7 +830,6 @@ void Character::drawArm(GLuint shaderProgramHandle,
     glm::mat4 view = glm::mat4(1.0f); // NO camera transform
 
     _computeAndSendMatrixUniforms(model, view, projMtx);
-    //CSCI441::drawSolidCube(0.2f);
 
     // uniforms
     glUseProgram(shaderProgramHandle);

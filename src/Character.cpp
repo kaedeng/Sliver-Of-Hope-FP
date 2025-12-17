@@ -611,34 +611,36 @@ void Character::update(float deltaTime) {
     };
     Vertex vertices2[] = {
         // triangle 1
-        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f, 0.95f) },
         { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.95f) },
         { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(2.0f/3.0-0.05, 0.05f) },
         // triangle 2
-        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f, 0.95f) },
         { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.05f) },
-        { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.05f) }
+        { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(1.0/3.0f, 0.05f) }
     };
     Vertex vertices3[] = {
         // triangle 1
-        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f, 0.95f) },
-        { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(3.0/3.0f-0.05f, 0.95f) },
-        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(3.0f/3.0-0.05f, 0.05f) },
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(3.0/3.0f-0.1f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(3.0f/3.0-0.1f, 0.05f) },
         // triangle 2
         { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.95f) },
-        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(3.0/3.0f-0.05f, 0.05f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(3.0/3.0f-0.1f, 0.05f) },
         { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.05f) }
     };
 
     glBindVertexArray(_vao);
     glBindBuffer(GL_ARRAY_BUFFER,_vbo);
-    int frame = int(deltaTime / 0.3f) % 3;
+    int frame = int(lastDelt / 0.3f) % 4;
     if (frame==0) {
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices1), vertices1);
-    } else if (frame==2) {
+    } else if (frame==1) {
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices2), vertices2);
-    } else if (frame==3) {
+    } else if (frame==2) {
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices3), vertices3);
+    } else if (frame==3) {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices2), vertices2);
     }
     glBindVertexArray(0);
 }

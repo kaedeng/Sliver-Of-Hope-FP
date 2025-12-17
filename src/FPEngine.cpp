@@ -101,6 +101,10 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
       _minimapVisible = !_minimapVisible;
       break;
 
+    case GLFW_KEY_Z:
+      _useWintonParticles = !_useWintonParticles;
+      break;
+
     default:
       break; // suppress CLion warning
     }
@@ -478,6 +482,8 @@ void FPEngine::mSetupTextures() {
   _texHandles[TEXTURE_ID::PARTICLE] =
       _loadAndRegisterTexture("assets/textures/blood.png");
     _texHandles[TEXTURE_ID::PLAYER] = _loadAndRegisterTexture("./assets/textures/weaponspell1.png");
+  _texHandles[TEXTURE_ID::WINTON] =
+    _loadAndRegisterTexture("./assets/textures/winton.png");
 }
 
 void FPEngine::mSetupBuffers() {
@@ -1110,10 +1116,11 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     }
 
   // particles
+  GLuint particleTexture = _useWintonParticles ? _texHandles[TEXTURE_ID::WINTON] : _texHandles[TEXTURE_ID::PARTICLE];
   _particleSystem->draw(_spriteShaderProgram->getShaderProgramHandle(),
                         _spriteShaderUniformLocations.mvpMatrix,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
-                        projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
+                        projMtx, particleTexture);
 
     // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
 

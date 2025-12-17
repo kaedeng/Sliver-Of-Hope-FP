@@ -21,6 +21,7 @@ A - Strafe the character to the left with respect to where you're facing.
 S - Move the character backwards with respect to where you're facing.
 D - Strafe the character to the right with respect to where you're facing.
 H - Hide the minimap
+Z - (secret)
 Mouse Movement: Move the camera
 
 Compiling:

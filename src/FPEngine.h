@@ -82,7 +82,7 @@ private:
   GLint _leftMouseButtonState;
 
   /// \desc total number of textures in our scene
-  static constexpr GLuint NUM_TEXTURES = 5;
+  static constexpr GLuint NUM_TEXTURES = 6;
   /// \desc used to index through our texture array to give named access
   enum TEXTURE_ID {
     /// \desc ground texture
@@ -93,6 +93,8 @@ private:
     PARTICLE = 2,
     // Hands texture
     PLAYER = 3,
+    // WINTON
+    WINTON = 4
   };
   /// \desc texture handles for our textures
   GLuint _texHandles[NUM_TEXTURES] = {0};
@@ -139,6 +141,7 @@ private:
 
   // game objects
   ParticleSystem *_particleSystem;
+  bool _useWintonParticles = false; // Toggle with Z key
 
   /// \desc the size of the world (controls the ground size and locations of
   /// buildings)

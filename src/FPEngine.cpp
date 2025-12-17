@@ -1117,10 +1117,11 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
   // particles
   GLuint particleTexture = _useWintonParticles ? _texHandles[TEXTURE_ID::WINTON] : _texHandles[TEXTURE_ID::PARTICLE];
+  float particleSizeMultiplier = _useWintonParticles ? 2.5f : 1.0f;
   _particleSystem->draw(_spriteShaderProgram->getShaderProgramHandle(),
                         _spriteShaderUniformLocations.mvpMatrix,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
-                        projMtx, particleTexture);
+                        projMtx, particleTexture, particleSizeMultiplier);
 
     // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
 

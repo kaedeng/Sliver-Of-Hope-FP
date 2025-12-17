@@ -1156,8 +1156,7 @@ void FPEngine::_updateScene() {
     glm::vec3 charPos = _pCharacter->getPosition();
 
     // collision detection to current position
-    const float CHARACTER_RADIUS = 0.5f;
-    charPos = _checkAndResolveCollisions(charPos, CHARACTER_RADIUS);
+    charPos = _checkAndResolveCollisions(charPos, _pCharacter->getRadius());
 
     // terrain height at the characters current pos
     float terrainHeight = _getTerrainHeight(charPos.x, charPos.z);
@@ -1237,7 +1236,7 @@ void FPEngine::_updateScene() {
 
   _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
   glm::vec3 wilfPos = _pWilfred->getPosition();
-  glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+  glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), _pWilfred->getRadius());
   _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
 
   // update enemy elster
@@ -1246,7 +1245,7 @@ void FPEngine::_updateScene() {
   float elsterTerrainHeight =
       _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
   glm::vec3 newElsterPos = _checkAndResolveCollisions(
-      glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
+      glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), _pEnemyElster->getRadius());
   _pEnemyElster->setPosition(
       glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
 
@@ -1584,10 +1583,7 @@ float FPEngine::_getEnemyDistance() {
 
 
 float FPEngine::_getObjectHeightAt(float x, float z) const {
-  const float CHARACTER_RADIUS =
-      0.5f; // Match this with character collision radius
-
-  // treat walls as having a flat top for landing
+  // treat walls as having a flat top
   for (const auto &wall : _walls) {
     glm::vec2 charPosXZ(x, z);
     glm::vec2 wallPosXZ(wall.position.x, wall.position.z);

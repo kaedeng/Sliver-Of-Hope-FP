@@ -727,18 +727,13 @@ void FPEngine::mSetupScene() {
                                 _flatShaderUniformLocations.materialColor,
                                 glm::vec3(ballX, ballY, ballZ));
 
-  // Set up Bezier curve for killer ball movement
-  // Curve has varying curvature to demonstrate arc-length parameterization:
-  // - Sharp turn at start (P0 to P1 pulls hard in Z direction)
-  // - Straighter middle section
-  // - Sharp turn at end (P2 to P3 pulls hard in opposite Z direction)
-  // Without arc-length param, ball would slow at sharp turns and speed up in middle
-  glm::vec3 p0(ballX, ballY, ballZ);                      // Start point
-  glm::vec3 p1(ballX - 5.0f, ballY + 15.0f, ballZ + 30.0f);  // Sharp pull up and forward
-  glm::vec3 p2(ballX - 55.0f, ballY + 15.0f, ballZ - 30.0f); // Sharp pull down and back
-  glm::vec3 p3(ballX - 60.0f, ballY, ballZ);              // End point
+  // has arcc lenght param
+  glm::vec3 p0(ballX, ballY, ballZ);
+  glm::vec3 p1(ballX - 5.0f, ballY + 15.0f, ballZ + 30.0f);
+  glm::vec3 p2(ballX - 55.0f, ballY + 15.0f, ballZ - 30.0f);
+  glm::vec3 p3(ballX - 60.0f, ballY, ballZ);
   _pKillerBall->setBezierControlPoints(p0, p1, p2, p3);
-  _pKillerBall->setBezierSpeed(20.0f); // Units per second along the curve
+  _pKillerBall->setBezierSpeed(20.0f); // units per second along the curve
 
   _enemies.push_back(_pKillerBall);
   _enemies.push_back(_pTympanius);

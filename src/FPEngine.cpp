@@ -1393,6 +1393,7 @@ void FPEngine::_updateScene() {
     }
 
     spotLightPosition = _firstPersonCam->getPosition();
+    spotLightPosition.y += 6.0f;
     spotLightDirection =
           glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
 

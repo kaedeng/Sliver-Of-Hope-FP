@@ -122,7 +122,8 @@ void ParticleSystem::update(float deltaTime) {
 
 void ParticleSystem::draw(GLuint shaderProgramHandle, GLint mvpMatrixLoc,
                           GLint textureLoc, const glm::mat4 &viewMtx,
-                          const glm::mat4 &projMtx, GLuint textureHandle) {
+                          const glm::mat4 &projMtx, GLuint textureHandle,
+                          float sizeMultiplier) {
   if (_particles.empty())
     return;
 
@@ -163,8 +164,8 @@ void ParticleSystem::draw(GLuint shaderProgramHandle, GLint mvpMatrixLoc,
     modelMtx =
         glm::rotate(modelMtx, particle.rotation, glm::vec3(0.0f, 0.0f, 1.0f));
 
-    // Scale based on size
-    modelMtx = glm::scale(modelMtx, glm::vec3(particle.size));
+    // Scale based on size and multiplier
+    modelMtx = glm::scale(modelMtx, glm::vec3(particle.size * sizeMultiplier));
 
     glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
 

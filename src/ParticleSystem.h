@@ -22,7 +22,8 @@ public:
               GLint textureLoc,
               const glm::mat4& viewMtx,
               const glm::mat4& projMtx,
-              GLuint textureHandle);
+              GLuint textureHandle,
+              float sizeMultiplier = 1.0f);
 
 private:
     struct Particle {

@@ -89,14 +89,10 @@ private:
     GROUND = 0,
     /// wall texture
     WALL = 1,
-    // enemy texture
-    ENEMY = 2,
-    // coin texture
-    COIN = 3,
     // particle texture
-    PARTICLE = 4,
+    PARTICLE = 2,
     // Hands texture
-    PLAYER = 5,
+    PLAYER = 3,
   };
   /// \desc texture handles for our textures
   GLuint _texHandles[NUM_TEXTURES] = {0};
@@ -117,25 +113,25 @@ private:
   Wilfred *_pWilfred;
   Character *_pEnemyElster;
   Farina *_pFarina;
+  std::vector<Enemy*> _enemies;
 
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;
   bool _characterOnGround;
   bool _characterDead;
+  int _enemyThatKilled = -1; // 0 = Tympanius, 1 = Wilfred, 2 = Elster, 3 = Farina
+  float _deathEasingParam = 0;
 
   Skybox *_pSkybox;
 
-  const glm::vec3 spotLightColor = {1.0f, 1.0f, 1.0f};
+  const glm::vec3 spotLightColor = {0.95f, 1.0f, 0.9f};
   const glm::vec3 pointLightColor = {1.0f, 0.0f, 0.0f};
   const glm::vec3 lightDirection = {-1.0f, 0.1f, -0.2f};
   const glm::vec3 lightColor = {0, 0, 0};
 
   // game objects
-  std::vector<Tympanius *> _enemies;
-  std::vector<Coin *> _coins;
   ParticleSystem *_particleSystem;
-  int _coinsCollected;
 
   /// \desc the size of the world (controls the ground size and locations of
   /// buildings)
@@ -144,20 +140,6 @@ private:
   GLuint _groundVAO;
   /// \desc the number of points that make up our ground object
   GLsizei _numGroundPoints;
-
-  /// \desc smart container to store information specific to each tree we wish
-  /// to draw
-  struct TreeData {
-    /// \desc transformations to position and size the tree
-    glm::mat4 leavesModelMatrix;
-    glm::mat4 trunkModelMatrix;
-    /// \desc color to draw the tree
-    glm::vec3 color;
-    glm::vec3 barkColor;
-    float frameOffset;
-  };
-  /// \desc information list of all the trees to draw
-  std::vector<TreeData> _trees;
 
   struct BushVertexData {
     glm::vec3 position;
@@ -183,35 +165,6 @@ private:
   /// \desc creates the ground VAO
   void _createGroundBuffers();
 
-  /// \desc shader program that performs lighting
-  CSCI441::ShaderProgram
-      *_lightingShaderProgram; // the wrapper for our shader program
-  /// \desc stores the locations of all of our shader uniforms
-  struct LightingShaderUniformLocations {
-    /// \desc precomputed MVP matrix location
-    GLint mvpMatrix;
-    /// \desc material diffuse color location
-    GLint materialColor;
-    // TODO #1: add new uniforms
-    GLint lightDirection;
-    GLint lightPosition;
-    GLint pointLightColor;
-    GLint spotLightPosition;
-    GLint spotLightDirection;
-    GLint spotLightColor;
-    GLint lightColor;
-    GLint normalMatrix;
-    GLint modelMatrix;
-    GLint cameraPosition;
-  } _lightingShaderUniformLocations;
-  /// \desc stores the locations of all of our shader attributes
-  struct LightingShaderAttributeLocations {
-    /// \desc vertex position location
-    GLint vPos;
-    // TODO #2: add new attributes
-    GLint vNormal;
-
-  } _lightingShaderAttributeLocations;
   CSCI441::ShaderProgram
       *_textureShaderProgram; // the wrapper for our shader program
   struct TextureShaderUniformLocations {
@@ -219,8 +172,16 @@ private:
     GLint mvpMatrix;
     // TODO #11 - texture map
     GLint texMap;
-
+    GLint spotLightPosition;
+    GLint spotLightDirection;
+    GLint spotLightColor;
+    GLint normalMatrix;
+    GLint modelMatrix;
+    GLint cameraPosition;
+    GLint materialColor;
+    GLint isTextured;
   } _textureShaderUniformLocations;
+
   struct TextureShaderAttributeLocations {
         /// \desc vertex position location
         GLint vPos;
@@ -304,20 +265,11 @@ private:
   /// \desc set the lighting parameters to the shader
   void _setLightingParameters();
 
-  // spawn enemies around the world
-  void _spawnEnemies(int numEnemies);
-
-  // spawn coins at corners of the map
-  void _spawnCoins();
-
   // check collision between enemies
   void _checkEnemyCollisions();
 
   // check collision between player and enemies
   void _checkPlayerEnemyCollision();
-
-  // check collision between player and coins
-  void _checkCoinCollection();
 
   // calculates the height of the Bezier terrain at a given position
   float _getTerrainHeight(float x, float z) const;
@@ -329,6 +281,9 @@ private:
 
   // gets the height of the tallest object at a given position
   float _getObjectHeightAt(float x, float z) const;
+
+  
+  void doDeath(const char* killerName, glm::vec3 playerPos);
 
   /// \desc precomputes the matrix uniforms CPU-side and then sends them
   /// to the GPU to be used in the shader for each vertex.  It is more efficient

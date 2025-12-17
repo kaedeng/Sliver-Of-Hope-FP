@@ -62,16 +62,16 @@ void main() {
     vec3 spotSpecular = vec3(0.3) * spotSpec * spotLightColor;
 
     // Spotlight cone
-    float innerCut = cos(radians(30.0));
+    float innerCut = cos(radians(25.0));
     float outerCut = cos(radians(35.0));
     float theta = dot(spotLightDir, normalize(-spotLightDirection));
-    float intensity = smoothstep(outerCut, innerCut, theta);
+    float intensity = smoothstep(outerCut, innerCut, theta) * 0.75;
 
     // Attenuation
     float distance = length(spotLightPosition - worldPos);
-    float attenuation = 1.0 / (1.0 + 0.09 * distance + 0.032 * (distance * distance));
+    float attenuation = 1.0 / (0.5 + 0.0 * distance + 0.0015 * (distance * distance));
 
-    vec3 spotColor = (spotDiffuse + spotSpecular) * intensity;
+    vec3 spotColor = (spotDiffuse + spotSpecular) * intensity * attenuation;
 
     // Ambient
     vec3 ambient = vec3(0.0, 0.0, 0.0) * texColor.rgb;

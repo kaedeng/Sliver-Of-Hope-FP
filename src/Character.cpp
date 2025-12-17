@@ -17,7 +17,7 @@ Character::Character(
     GLint materialShininessLocation
 ) : _shaderProgramHandle(shaderProgramHandle),
     _position(0.0f, 0.0f, 0.0f),
-    _heading(0.0f),
+    _heading(M_PI/2),
     _headingVector(0.0f, 0.0f, 1.0f),
     _moveSpeed(5.0f),
     _model(nullptr)
@@ -810,7 +810,18 @@ void Character::turnRight(float angle) {
     _heading -= angle;
 }
 
-void Character::setPosition(const glm::vec3& position) {
+void Character::bounceOff(const glm::vec3& otherPosition) {
+    // bounce direction after collision 
+    glm::vec3 bounceDir = _position - otherPosition;
+    bounceDir.y = 0.0f;
+
+    if (glm::length(bounceDir) > 0.01f) {
+        glm::vec3 headingVector = glm::normalize(bounceDir);
+        _heading = atan2(headingVector.x, headingVector.z);
+    }
+}
+
+void Character::setPosition(glm::vec3 position) {
     _position = position;
 }
 

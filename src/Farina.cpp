@@ -89,6 +89,18 @@ void Farina::update(float time, const glm::vec3 &heroPosition,
   }
 }
 
+void Farina::bounceOff(const glm::vec3& otherPosition) {
+    // bounce direction after collision 
+    glm::vec3 bounceDir = _position - otherPosition;
+    bounceDir.y = 0.0f;
+
+    if (glm::length(bounceDir) > 0.01f) {
+        glm::vec3 headingVector = glm::normalize(bounceDir);
+        _heading = headingVector;
+        _angle = atan2(_heading.x, _heading.z);
+    }
+}
+
 // Get & set Farina's position
 glm::vec3 Farina::getPosition() const { return _position; }
 void Farina::setPosition(glm::vec3 position) { _position = position; }

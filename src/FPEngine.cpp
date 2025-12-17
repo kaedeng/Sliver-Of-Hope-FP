@@ -15,23 +15,20 @@
 // Public Interface
 
 FPEngine::FPEngine()
-    : CSCI441::OpenGLEngine(4, 1, 640, 480, "FP: The Big Spooky"),
+    : CSCI441::OpenGLEngine(4, 1, 960, 720, "FP: The Big Spooky"),
       _mousePosition({MOUSE_UNINITIALIZED, MOUSE_UNINITIALIZED}),
       _leftMouseButtonState(GLFW_RELEASE), _cam(nullptr),
       _cameraSpeed({0.0f, 0.0f}), _cameraPitch(glm::pi<float>() * 0.5f),
       _groundVAO(0), _numGroundPoints(0),
-      _lightingShaderProgram(nullptr),
     _spriteShaderProgram(nullptr), 
     _spriteShaderUniformLocations( {-1, -1} ),
     _textureShaderProgram(nullptr),
     _textureShaderUniformLocations({-1, -1}),
-    _textureShaderAttributeLocations({-1, -1, -1}),
-      _lightingShaderUniformLocations({-1, -1, -1, -1, -1}),
-      _lightingShaderAttributeLocations({-1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
+    _textureShaderAttributeLocations({-1, -1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr), _coinsCollected(0){
+      _characterDead(false), _particleSystem(nullptr){
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -51,16 +48,6 @@ FPEngine::~FPEngine() {
   delete _pSkybox;
   delete _spriteShaderProgram;
   delete _particleSystem;
-
-  for (auto enemy : _enemies) {
-    delete enemy;
-  }
-  _enemies.clear();
-
-  for (auto coin : _coins) {
-    delete coin;
-  }
-  _coins.clear();
 }
 
 void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
@@ -87,11 +74,11 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _elsterShaderUniformLocations.materialDiffuse,
           _elsterShaderUniformLocations.materialSpecular,
           _elsterShaderUniformLocations.materialShininess);
-      _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
-                              _lightingShaderUniformLocations.mvpMatrix,
-                              _lightingShaderUniformLocations.normalMatrix,
-                              _lightingShaderUniformLocations.materialColor,
-                              _lightingShaderUniformLocations.modelMatrix);
+      _pWilfred = new Wilfred(_textureShaderProgram->getShaderProgramHandle(),
+                              _textureShaderUniformLocations.mvpMatrix,
+                              _textureShaderUniformLocations.normalMatrix,
+                              _textureShaderUniformLocations.materialColor,
+                              _textureShaderUniformLocations.modelMatrix);
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -206,40 +193,6 @@ void FPEngine::mSetupOpenGL() {
 }
 
 void FPEngine::mSetupShaders() {
-  _lightingShaderProgram =
-      new CSCI441::ShaderProgram("shaders/mp.v.glsl", "shaders/mp.f.glsl");
-  _lightingShaderUniformLocations.mvpMatrix =
-      _lightingShaderProgram->getUniformLocation("mvpMatrix");
-  _lightingShaderUniformLocations.materialColor =
-      _lightingShaderProgram->getUniformLocation("materialColor");
-  // TODO #3A: assign uniforms
-  _lightingShaderUniformLocations.lightDirection =
-      _lightingShaderProgram->getUniformLocation("lightDirection");
-  _lightingShaderUniformLocations.lightPosition =
-      _lightingShaderProgram->getUniformLocation("lightPosition");
-  _lightingShaderUniformLocations.spotLightPosition =
-      _lightingShaderProgram->getUniformLocation("spotLightPosition");
-  _lightingShaderUniformLocations.spotLightDirection =
-      _lightingShaderProgram->getUniformLocation("spotLightDirection");
-  _lightingShaderUniformLocations.lightColor =
-      _lightingShaderProgram->getUniformLocation("lightColor");
-  _lightingShaderUniformLocations.spotLightColor =
-      _lightingShaderProgram->getUniformLocation("spotLightColor");
-  _lightingShaderUniformLocations.pointLightColor =
-      _lightingShaderProgram->getUniformLocation("pointLightColor");
-  _lightingShaderUniformLocations.normalMatrix =
-      _lightingShaderProgram->getUniformLocation("normalMatrix");
-  _lightingShaderUniformLocations.modelMatrix =
-      _lightingShaderProgram->getUniformLocation("modelMatrix");
-  _lightingShaderUniformLocations.cameraPosition =
-      _lightingShaderProgram->getUniformLocation("cameraPosition");
-
-  _lightingShaderAttributeLocations.vPos =
-      _lightingShaderProgram->getAttributeLocation("vPos");
-  // TODO #3B: assign attributes
-  _lightingShaderAttributeLocations.vNormal =
-      _lightingShaderProgram->getAttributeLocation("vNormal");
-
   _elsterShaderProgram = new CSCI441::ShaderProgram("shaders/elster.v.glsl",
                                                     "shaders/elster.f.glsl");
 
@@ -396,8 +349,27 @@ void FPEngine::mSetupShaders() {
     _textureShaderProgram = new CSCI441::ShaderProgram("shaders/lab06.v.glsl", "shaders/lab06.f.glsl" );
     // query uniform locations
     _textureShaderUniformLocations.mvpMatrix      = _textureShaderProgram->getUniformLocation("mvpMatrix");
+    _textureShaderUniformLocations.modelMatrix      = _textureShaderProgram->getUniformLocation("modelMatrix");
+    _textureShaderUniformLocations.normalMatrix      = _textureShaderProgram->getUniformLocation("normalMatrix");
+    
     // TODO #12A - texture map
     _textureShaderUniformLocations.texMap      = _textureShaderProgram->getUniformLocation("textureMap");
+
+    
+  _textureShaderUniformLocations.spotLightPosition =
+      _textureShaderProgram->getUniformLocation("spotLightPosition");
+  _textureShaderUniformLocations.spotLightDirection =
+      _textureShaderProgram->getUniformLocation("spotLightDirection");
+  _textureShaderUniformLocations.spotLightColor =
+      _textureShaderProgram->getUniformLocation("spotLightColor");
+
+   _textureShaderUniformLocations.cameraPosition =
+      _textureShaderProgram->getUniformLocation("cameraPosition");
+      
+   _textureShaderUniformLocations.materialColor =
+      _textureShaderProgram->getUniformLocation("materialColor");
+   _textureShaderUniformLocations.isTextured =
+      _textureShaderProgram->getUniformLocation("isTextured");
 
     // set static uniforms
     // TODO #13 - set uniform
@@ -408,7 +380,7 @@ void FPEngine::mSetupShaders() {
   _textureShaderAttributeLocations.vNormal =
       _textureShaderProgram->getAttributeLocation("vNormal");
   _textureShaderAttributeLocations.texCoord =
-      _textureShaderProgram->getAttributeLocation("vTexPos");
+      _textureShaderProgram->getAttributeLocation("vTexCoord");
 
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
                                          _textureShaderAttributeLocations.texCoord);
@@ -420,19 +392,15 @@ void FPEngine::mSetupTextures() {
       _loadAndRegisterTexture("./assets/textures/floor.png");
   _texHandles[TEXTURE_ID::WALL] = 
       _loadAndRegisterTexture("./assets/textures/bricks.png");
-  _texHandles[TEXTURE_ID::ENEMY] =
-      _loadAndRegisterTexture("assets/textures/goomba.png");
-  _texHandles[TEXTURE_ID::COIN] =
-      _loadAndRegisterTexture("assets/textures/coin.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
-      _loadAndRegisterTexture("assets/textures/sonic_coin.png");
+      _loadAndRegisterTexture("assets/textures/blood.png");
 }
 
 void FPEngine::mSetupBuffers() {
   // TODO #4: need to connect our 3D Object Library to our shader
   CSCI441::setVertexAttributeLocations(
-      _lightingShaderAttributeLocations.vPos,
-      _lightingShaderAttributeLocations.vNormal);
+      _textureShaderAttributeLocations.vPos,
+      _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
   _createGroundBuffers();
   _generateEnvironment();
@@ -525,7 +493,7 @@ void FPEngine::mSetupScene() {
   // Position character at center of mountain, slightly above terrain
   // The terrain height at (0, 0) is approximately 33.75 units (0.6 *
   // hillHeight)
-  _pCharacter->setPosition(glm::vec3(70.0f, _getTerrainHeight(20.0f, 0.0f), 0.0f));
+  _pCharacter->setPosition(glm::vec3(70.0f, _getTerrainHeight(68.0f, 0.0f), 0.0f));
 
   _pTympanius = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
   _pTympanius->setPosition(glm::vec3(4.0f, _getTerrainHeight(4.0f, 4.0f), 4.0f));
@@ -544,11 +512,11 @@ void FPEngine::mSetupScene() {
 
   _cameraSpeed = glm::vec2(0.25f, 0.02f);
 
-  _pWilfred = new Wilfred(_lightingShaderProgram->getShaderProgramHandle(),
-                          _lightingShaderUniformLocations.mvpMatrix,
-                          _lightingShaderUniformLocations.normalMatrix,
-                          _lightingShaderUniformLocations.materialColor,
-                          _lightingShaderUniformLocations.modelMatrix);
+  _pWilfred = new Wilfred(_textureShaderProgram->getShaderProgramHandle(),
+                          _textureShaderUniformLocations.mvpMatrix,
+                          _textureShaderUniformLocations.normalMatrix,
+                          _textureShaderUniformLocations.materialColor,
+                          _textureShaderUniformLocations.modelMatrix);
     _pWilfred->setPosition(glm::vec3(10.0f, _getTerrainHeight(10.0f, 10.0f), 10.0f));
 
   // enemy Elster
@@ -560,15 +528,6 @@ void FPEngine::mSetupScene() {
                     _elsterShaderUniformLocations.materialDiffuse,
                     _elsterShaderUniformLocations.materialSpecular,
                     _elsterShaderUniformLocations.materialShininess);
-
-  // Farina
-  _pFarina = new Farina(_lightingShaderProgram->getShaderProgramHandle(),
-                        _lightingShaderUniformLocations.mvpMatrix,
-                        _lightingShaderUniformLocations.materialColor,
-                        _lightingShaderUniformLocations.normalMatrix,
-                        _lightingShaderUniformLocations.modelMatrix);
-
-  _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
 
   if (!_pEnemyElster->loadFromFile(
           "./assets/models/heroes/Elster/elster.glb")) {
@@ -584,18 +543,26 @@ void FPEngine::mSetupScene() {
 
   // enemy elster to use walking animation
   _pEnemyElster->playAnimation("elsterWalking");
+  
+  // Farina
+  _pFarina = new Farina(_textureShaderProgram->getShaderProgramHandle(),
+                        _textureShaderUniformLocations.mvpMatrix,
+                        _textureShaderUniformLocations.materialColor,
+                        _textureShaderUniformLocations.normalMatrix,
+                        _textureShaderUniformLocations.modelMatrix);
+
+  _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
+
+  _enemies.push_back(_pTympanius);
+  _enemies.push_back(_pWilfred);
+  _enemies.push_back(_pEnemyElster);
+  _enemies.push_back(_pFarina);
 
   // Set lighting parameters
   _setLightingParameters();
 
   // Initialize particle system
   _particleSystem = new ParticleSystem();
-
-  // Spawn enemies
-  _spawnEnemies(0); // Spawn 10 enemies
-
-  // Spawn coins at corners
-  _spawnCoins();
 }
 
 void FPEngine::_setLightingParameters() {
@@ -604,23 +571,8 @@ void FPEngine::_setLightingParameters() {
   const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
   const glm::vec3 spotLightDirection =
       glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-  _lightingShaderProgram->useProgram();
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightDirection, lightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightPosition, lightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightColor, lightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightColor, spotLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.pointLightColor, pointLightColor);
-
-  const glm::vec3 ambientLightColor = glm::vec3(0.71, 0.54, 0.7);
+  
+      const glm::vec3 ambientLightColor = glm::vec3(0.71, 0.54, 0.7);
 
   _elsterShaderProgram->useProgram();
   _elsterShaderProgram->setProgramUniform(
@@ -673,7 +625,13 @@ void FPEngine::_setLightingParameters() {
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor, pointLightColor);
 
-  
+  _textureShaderProgram->useProgram();
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightColor, spotLightColor);
 }
 
 //*************************************************************************************
@@ -682,8 +640,6 @@ void FPEngine::_setLightingParameters() {
 
 void FPEngine::mCleanupShaders() {
   fprintf(stdout, "[INFO]: ...deleting Shaders.\n");
-  delete _lightingShaderProgram;
-  _lightingShaderProgram = nullptr;
   delete _elsterShaderProgram;
   _elsterShaderProgram = nullptr;
   delete _groundTessShaderProgram;
@@ -778,97 +734,16 @@ void FPEngine::_generateEnvironment() {
     } else {
         std::cerr << "Unable to open file" << std::endl;
     }
-
-  // psych! everything's on a grid.
-  for (int i = LEFT_END_POINT; i < RIGHT_END_POINT; i += GRID_SPACING_WIDTH) {
-    for (int j = BOTTOM_END_POINT; j < TOP_END_POINT;
-         j += GRID_SPACING_LENGTH) {
-      // don't just draw a tree ANYWHERE.
-      if (getRand() < 0.1f) {
-        // Calculate distance from center
-        float distFromCenterX = abs(i);
-        float distFromCenterZ = abs(j);
-
-        // Skip too close to spawn
-        if (distFromCenterX < 10.0f && distFromCenterZ < 10.0f) {
-          continue;
-        }
-
-        // Skip too close to coin
-        bool nearCoin = false;
-        for (const auto &corner : coinCorners) {
-          float distToCoin = glm::length(glm::vec2(i, j) - corner);
-          if (distToCoin < 10.0f) {
-            nearCoin = true;
-            break;
-          }
-        }
-        if (nearCoin) {
-          continue;
-        }
-
-        // if (getRand() < 0.5f) {
-        //   BushData bush;
-        //   bush.size = 2.0f;
-        //   float bushX = i + getRand() - 2;
-        //   float bushZ = j + getRand() - 2;
-        //   float terrainY = _getTerrainHeight(bushX, bushZ);
-        //   // bush sits on the terrain
-        //   bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
-        //   bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
-        //                          0.588 + (getRand() - 2) * 0.15,
-        //                          0.455 + (getRand() - 2) * 0.15);
-        //   _bushes.push_back(bush);
-        //   continue;
-        // }
-
-        // translate to spot
-        float treeX = i + getRand() - 2;
-        float treeZ = j + getRand() - 2;
-        float terrainY = _getTerrainHeight(treeX, treeZ);
-
-        // compute random height
-        GLdouble height = powf(getRand(), 2.5) * 15 + 10;
-
-        // need to place it at terrain height
-        // and scale it to the desired height
-        glm::mat4 transToSpotMtx =
-            glm::translate(glm::mat4(1.0), glm::vec3(treeX, terrainY, treeZ));
-        glm::mat4 scaleToHeightMtx =
-            glm::scale(glm::mat4(1.0), glm::vec3(1, height, 1));
-
-        // translate up to position leaves at top of trunk
-        glm::mat4 transToHeight =
-            glm::translate(glm::mat4(1.0), glm::vec3(0, height * 0.2f, 0));
-
-        // compute full model matrix
-        glm::mat4 leavesModelMatrix =
-            transToHeight * scaleToHeightMtx * transToSpotMtx;
-        glm::mat4 trunkModelMatrix = scaleToHeightMtx * transToSpotMtx;
-
-        // compute random colors
-        glm::vec3 color(0.086 + (getRand() - 2) * 0.15,
-                        0.588 + (getRand() - 2) * 0.15,
-                        0.455 + (getRand() - 2) * 0.15);
-        glm::vec3 barkColor(0.49 + (getRand() - 2) * 0.1,
-                            0.439 + (getRand() - 2) * 0.1,
-                            0.251 + (getRand() - 2) * 0.1);
-
-        // get random offset for the swaying
-        float frameOffset(getRand() * M_PI);
-
-        // store tree properties
-        TreeData currentTree = {leavesModelMatrix, trunkModelMatrix, color,
-                                barkColor, frameOffset};
-        _trees.emplace_back(currentTree);
-      }
-    }
-  }
 }
 
 void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                             const glm::vec3 &cameraPos) const {
   _pSkybox->draw(viewMtx, projMtx);
+  
+
+  const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
+  const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
+  const glm::vec3 spotLightDirection = glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
 
   // tess ground
   _groundTessShaderProgram->useProgram();
@@ -900,16 +775,16 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       lightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.lightPosition,
-      glm::vec3(1.0f, 0.0f, 1.0f));
+      lightPosition);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.pointLightColor,
       pointLightColor);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightPosition,
-      _firstPersonCam->getPosition());
+      spotLightPosition);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightDirection,
-      glm::normalize(_firstPersonCam->getLookAtPoint() - _firstPersonCam->getPosition()));
+     spotLightDirection);
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightColor,
       spotLightColor);
@@ -943,32 +818,19 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
   _pEnemyElster->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
-  // lighting shader
-  _lightingShaderProgram->useProgram();
-
-  const glm::vec3 lightPosition = glm::vec3(1.0f, 0.0f, 1.0f);
-    const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
-    const glm::vec3 spotLightDirection =
-        glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightDirection, lightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightPosition, lightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.lightColor, lightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightColor, spotLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.pointLightColor, pointLightColor);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.cameraPosition, cameraPos);
-
   /// OLD MAN TIME
+  _textureShaderProgram->useProgram();
+  _textureShaderProgram->useProgram();
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightPosition, spotLightPosition);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightDirection, spotLightDirection);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.spotLightColor, spotLightColor);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.cameraPosition, cameraPos);
+  _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.isTextured, false);
+
   glm::mat4 wilfredModelMtx(1.0f);
   _pWilfred->_animateBro(); // get this man an animation
   _pWilfred->drawWilfred(wilfredModelMtx, viewMtx, projMtx);
@@ -977,7 +839,9 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   // Farina
   _pFarina->draw(glm::mat4(1.0f), viewMtx, projMtx);
 
-    _textureShaderProgram->useProgram();
+  
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.isTextured, true);
   
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos, _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
 
@@ -985,10 +849,15 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
   for (const auto &bush : _bushes) {
     glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*2.0f, bush.size));
-      glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
+    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*4.0f, bush.size));
+    glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
+    const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(bushModelMtx)));
 
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.modelMatrix, bushModelMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.normalMatrix, normalMtx);
+    
+    
     //_lightingShaderProgram->setProgramUniform(
         //_lightingShaderUniformLocations.materialColor, bush.color);
 
@@ -1004,9 +873,9 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.spotLightDirection, spotLightDirection);
   _tympaniusShaderProgram->setProgramUniform(
-      _tympaniusShaderUniformLocations.lightColor, lightColor);
-  _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.spotLightColor, spotLightColor);
+  _tympaniusShaderProgram->setProgramUniform(
+      _tympaniusShaderUniformLocations.lightColor, lightColor);
   _tympaniusShaderProgram->setProgramUniform(
       _tympaniusShaderUniformLocations.pointLightColor, pointLightColor);
   _tympaniusShaderProgram->setProgramUniform(
@@ -1015,16 +884,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     if (_pTympanius->isAlive()) { 
       _pTympanius->draw(glm::mat4(1.0f), viewMtx, projMtx);
     }
-
-  // coins
-  for (auto coin : _coins) {
-    if (!coin->isCollected()) {
-      coin->draw(_spriteShaderProgram->getShaderProgramHandle(),
-                 _spriteShaderUniformLocations.mvpMatrix,
-                 _spriteShaderUniformLocations.spriteTexture, viewMtx, projMtx,
-                 _texHandles[TEXTURE_ID::COIN]);
-    }
-  }
 
   // particles
   _particleSystem->draw(_spriteShaderProgram->getShaderProgramHandle(),
@@ -1082,13 +941,6 @@ void FPEngine::_updateScene() {
       if (_keys[GLFW_KEY_D]) {
         _pCharacter->turnRight(_characterTurnSpeed * deltaTime);
       }
-    }
-
-    // Handle jumping with spacebar
-    if (_keys[GLFW_KEY_SPACE] && _characterOnGround) {
-      const float jumpVelocity = 15.0f; // Initial upward velocity for jump
-      _characterVerticalVelocity = jumpVelocity;
-      _characterOnGround = false;
     }
 
     if (moved) {
@@ -1166,8 +1018,7 @@ void FPEngine::_updateScene() {
       if (charPos.y < -50.0f && !_characterDead) {
         _characterDead = true;
         _particleSystem->spawnBurst(charPos, 30);
-        fprintf(stdout, "[INFO]: Player fell off the edge! RIP!\n");
-        fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+        fprintf(stdout, "[INFO]: Player fell off the world! Ooops my bad.\n");
       }
     }
 
@@ -1187,10 +1038,10 @@ void FPEngine::_updateScene() {
   glm::vec3 newTympaniusPos = _checkAndResolveCollisions(tympaniusPos, _pTympanius->getRadius());
   _pTympanius->setPosition(newTympaniusPos);
 
-    _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-    glm::vec3 wilfPos = _pWilfred->getPosition();
-    glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
-    _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
+  _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
+  glm::vec3 wilfPos = _pWilfred->getPosition();
+  glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+  _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
 
   // update enemy elster
   _pEnemyElster->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
@@ -1216,53 +1067,12 @@ void FPEngine::_updateScene() {
 
   _pFarina->setPosition(newFarinaPos);
 
-  for (auto enemy : _enemies) {
-    if (enemy->isAlive() && !enemy->isFalling()) {
-      enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-
-      // Check if enemy has fallen off the world
-      glm::vec3 enemyPos = enemy->getPosition();
-
-      // Apply collision detection with bushes
-      const float ENEMY_RADIUS = enemy->getRadius();
-      enemyPos = _checkAndResolveCollisions(enemyPos, ENEMY_RADIUS);
-
-      float terrainHeight = _getTerrainHeight(enemyPos.x, enemyPos.z);
-
-      if (terrainHeight < -500.0f) {
-        // Enemy is off the edge, start falling and spawn particles
-        enemy->setFalling(true);
-        _particleSystem->spawnBurst(enemyPos, 15);
-        fprintf(stdout, "[INFO]: Enemy fell off the edge!\n");
-      } else if (!enemy->isFalling()) {
-        // Keep enemy on terrain
-        enemyPos.y = terrainHeight + 1.0f;
-        enemy->setPosition(enemyPos);
-      }
-    } else if (enemy->isFalling()) {
-      // Update falling enemy
-      enemy->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
-
-      // if it has fallen too far spawn final rings and kill the thing
-      if (enemy->getPosition().y < -50.0f && enemy->isAlive()) {
-        enemy->setAlive(false);
-        _particleSystem->spawnBurst(enemy->getPosition(), 10);
-      }
-    }
-  }
-
-  // Update coins
-  for (auto coin : _coins) {
-    coin->update(deltaTime);
-  }
-
   // Update particle system
   _particleSystem->update(deltaTime);
 
   // Check collisions
   _checkEnemyCollisions();
   _checkPlayerEnemyCollision();
-  _checkCoinCollection();
 
   // Update camera to follow character
   if (_cam == _arcBallCam) {
@@ -1270,27 +1080,63 @@ void FPEngine::_updateScene() {
                                 glm::vec3(0.0f, 5.0f, 0.0f));
     _arcBallCam->recomputeOrientation();
   } else if (_cam == _firstPersonCam) {
-    const float EYE_HEIGHT = 5.0f; // TODO: find a better height i just placed it
-    glm::vec3 characterPos = _pCharacter->getPosition();
-    glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
+    glm::vec3 spotLightPosition;
+    glm::vec3 spotLightDirection;
+    if(!_characterDead){  
+      const float EYE_HEIGHT = 4.0f;
+      glm::vec3 characterPos = _pCharacter->getPosition();
+      glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
 
-    // update camera position to match character
-    _firstPersonCam->setPosition(cameraPos);
+      // update camera position to match character
+      _firstPersonCam->setPosition(cameraPos);
 
-    // Camera should look in the direction the character is facing
-    float characterHeading = _pCharacter->getHeading();
-    _firstPersonCam->setTheta(-characterHeading);
-    _firstPersonCam->setPhi(_cameraPitch);
+      // Camera should look in the direction the character is facing
+      float characterHeading = _pCharacter->getHeading();
+      _firstPersonCam->setTheta(-characterHeading);
+      _firstPersonCam->setPhi(_cameraPitch);
 
-    _firstPersonCam->recomputeOrientation();
-      const glm::vec3 spotLightPosition = _firstPersonCam->getPosition();
-      const glm::vec3 spotLightDirection =
+      _firstPersonCam->recomputeOrientation();
+    }
+    else{
+      glm::vec3 cameraPos = _firstPersonCam->getPosition();
+      if (cameraPos.y < 1000.0f){ // Death Falling animation
+        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y+10.0f*deltaTime, cameraPos.z));
+      }
+
+      glm::vec3 killerPos;
+      switch (_enemyThatKilled){
+        case 0: // Tympanius
+          killerPos = _pTympanius->getPosition();
+          break;
+        case 1: {// Wilfred
+          glm::vec3 wilfred_Pos = _pWilfred->getPosition();
+          killerPos = glm::vec3(wilfred_Pos.x, wilfred_Pos.y+2.5f, wilfred_Pos.z);
+          break;
+        }
+        case 2: { // Enemy Elster
+          glm::vec3 enemyElster_Pos = _pEnemyElster->getPosition();
+          killerPos = glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+1.5f, enemyElster_Pos.z);
+          break;
+        }
+        case 3: // Farina
+          killerPos = _pFarina->getPosition();
+          break;
+      }
+    
+      _deathEasingParam = glm::min(_deathEasingParam + deltaTime * 0.1f, 1.0f);
+
+      glm::vec3 current = _firstPersonCam->getLookAtPoint();
+      glm::vec3 target = killerPos;
+
+      glm::vec3 mixed = glm::mix(current, target, pow(_deathEasingParam, 3));
+      _firstPersonCam->setLookAtPoint(mixed);
+        
+      _firstPersonCam->computeViewMatrix();
+    }
+
+    spotLightPosition = _firstPersonCam->getPosition();
+    spotLightDirection =
           glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
-      _lightingShaderProgram->useProgram();
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightPosition, spotLightPosition);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.spotLightDirection, spotLightDirection);
 
   _elsterShaderProgram->useProgram();
   _elsterShaderProgram->setProgramUniform(
@@ -1365,16 +1211,16 @@ void FPEngine::_computeAndSendMatrixUniforms(const glm::mat4 &modelMtx,
   // precompute the Model-View-Projection matrix on the CPU
   const glm::mat4 mvpMtx = projMtx * viewMtx * modelMtx;
   // then send it to the shader on the GPU to apply to every vertex
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.mvpMatrix, mvpMtx);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.mvpMatrix, mvpMtx);
 
   // TODO #7: compute and send the normal matrix
   const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(modelMtx)));
   // then send it to the shader on the GPU to apply to every vertex
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.normalMatrix, normalMtx);
-  _lightingShaderProgram->setProgramUniform(
-      _lightingShaderUniformLocations.modelMatrix, modelMtx);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.normalMatrix, normalMtx);
+  _textureShaderProgram->setProgramUniform(
+      _textureShaderUniformLocations.modelMatrix, modelMtx);
 }
 
 float FPEngine::_getTerrainHeight(float x, float z) const {
@@ -1391,38 +1237,29 @@ float FPEngine::_getTerrainHeight(float x, float z) const {
 glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
                                                float characterRadius) const {
   glm::vec3 correctedPos = position;
-  const float characterHeight = 1.0f;
+  glm::vec2 charPosXZ = glm::vec2(position.x, position.z);
+  characterRadius += 2.0f;
 
   // Check collision with bushes
   for (const auto &bush : _bushes) {
     glm::vec3 bushCenter = bush.position;
     float bushRadius = bush.size;
+    float extent = bushRadius + characterRadius;
 
-    // Check vertical overlap first
-    float bushBottom = bushCenter.y - bushRadius;
-    float bushTop = bushCenter.y + bushRadius;
-    float charBottom = correctedPos.y;
-    float charTop = correctedPos.y + characterHeight;
+    float dx = correctedPos.x - bushCenter.x;
+    float dz = correctedPos.z - bushCenter.z;
 
-    // Only check horizontal collision if theres vertical overlap
-    bool verticalOverlap = (charBottom < bushTop) && (charTop > bushBottom);
+    float overlapX = extent - std::abs(dx);
+    float overlapZ = extent - std::abs(dz);
 
-    if (verticalOverlap) {
-      // Calculate 2D distance
-      glm::vec2 charPosXZ(correctedPos.x, correctedPos.z);
-      glm::vec2 bushPosXZ(bushCenter.x, bushCenter.z);
-      float distance2D = glm::length(charPosXZ - bushPosXZ);
-      float minDistance = characterRadius + bushRadius;
-
-      // Check if collision occurs
-      if (distance2D < minDistance && distance2D > 0.001f) {
-        // Push character away from bush in XZ plane
-        glm::vec2 pushDirection = glm::normalize(charPosXZ - bushPosXZ);
-        glm::vec2 correction = pushDirection * (minDistance - distance2D);
-        correctedPos.x += correction.x;
-        correctedPos.z += correction.y;
-      }
+    if (overlapX > 0 && overlapZ > 0) {
+        if (overlapX < overlapZ) {
+            correctedPos.x += (dx > 0 ? overlapX : -overlapX);
+        } else {
+            correctedPos.z += (dz > 0 ? overlapZ : -overlapZ);
+        }
     }
+
   }
 
   return correctedPos;
@@ -1496,65 +1333,10 @@ GLuint FPEngine::_loadAndRegisterTexture(const char *FILENAME) {
   return textureHandle;
 }
 
-void FPEngine::_spawnEnemies(int numEnemies) {
-  srand(time(0));
-
-  for (int i = 0; i < numEnemies; ++i) {
-    // random position around the world
-    float x = (getRand() - 0.5f) * WORLD_SIZE * 1.5f;
-    float z = (getRand() - 0.5f) * WORLD_SIZE * 1.5f;
-
-    // dont spawn too close to center
-    if (abs(x) < 15.0f && abs(z) < 15.0f) {
-      x += (x > 0 ? 20.0f : -20.0f);
-      z += (z > 0 ? 20.0f : -20.0f);
-    }
-
-    float y = _getTerrainHeight(x, z) + 1.0f;
-
-    // rand heading
-    float heading = getRand() * 2.0f * M_PI;
-
-    Tympanius *enemy = new Tympanius(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
-
-    _enemies.push_back(enemy);
-  }
-
-  fprintf(stdout, "[INFO]: Spawned %d enemies\n", numEnemies);
-}
-
-void FPEngine::_spawnCoins() {
-  // spawn 4 coins at the corners of the map
-  const float offset = WORLD_SIZE * 0.8f;
-
-  glm::vec3 corners[4] = {
-      glm::vec3(-offset, 0.0f, -offset), // Bottom left
-      glm::vec3(offset, 0.0f, -offset),  // Bottom right
-      glm::vec3(-offset, 0.0f, offset),  // Top left
-      glm::vec3(offset, 0.0f, offset)    // Top right
-  };
-
-  for (int i = 0; i < 4; ++i) {
-    float terrainY = _getTerrainHeight(corners[i].x, corners[i].z);
-    corners[i].y = terrainY + 2.0f;
-
-    Coin *coin = new Coin(corners[i]);
-    _coins.push_back(coin);
-  }
-
-  fprintf(stdout, "[INFO]: Spawned 4 coins at corners\n");
-}
-
 void FPEngine::_checkEnemyCollisions() {
   // collisions between all enemy pairs
   for (size_t i = 0; i < _enemies.size(); ++i) {
-    if (!_enemies[i]->isAlive() || _enemies[i]->isFalling())
-      continue;
-
     for (size_t j = i + 1; j < _enemies.size(); ++j) {
-      if (!_enemies[j]->isAlive() || _enemies[j]->isFalling())
-        continue;
-
       glm::vec3 pos1 = _enemies[i]->getPosition();
       glm::vec3 pos2 = _enemies[j]->getPosition();
 
@@ -1578,6 +1360,15 @@ void FPEngine::_checkEnemyCollisions() {
   }
 }
 
+void FPEngine::doDeath(const char* killerName, glm::vec3 playerPos){
+    _characterDead = true;
+    _particleSystem->spawnBurst(playerPos, 120);
+    glm::vec3 currentLookAt = _firstPersonCam->getLookAtPoint();
+    _firstPersonCam->setLookAtPoint(glm::vec3(currentLookAt.x, 50.0f, currentLookAt.z));
+    fprintf(stdout, "[INFO]: Player caught by %s! Game Over!\n", killerName);
+    fprintf(stdout, "[INFO]: You lasted: %dm %ds\n", static_cast<int>(glfwGetTime())/60, static_cast<int>(glfwGetTime())%60);
+}
+
 void FPEngine::_checkPlayerEnemyCollision() {
   if (_characterDead)
     return;
@@ -1594,10 +1385,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (tympaniusDistance < tympaniusMinDistance &&
       tympaniusVerticalDistance < maxVerticalDistance) {
-    _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 30);
-    fprintf(stdout, "[INFO]: Player hit by Tympanius! Game Over!\n");
-    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    _enemyThatKilled = 0;
+    doDeath("Tympanius", playerPos);
     return;
   }
 
@@ -1610,10 +1399,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (wilfredDistance < wilfredMinDistance &&
       wilfredVerticalDistance < maxVerticalDistance) {
-    _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 30);
-    fprintf(stdout, "[INFO]: Player hit by Wilfred! Game Over!\n");
-    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    _enemyThatKilled = 1;
+    doDeath("Wilfred", playerPos);
     return;
   }
 
@@ -1626,10 +1413,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
 
   if (elsterDistance < elsterMinDistance &&
       elsterVerticalDistance < maxVerticalDistance) {
-    _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 30);
-    fprintf(stdout, "[INFO]: Player hit by enemy Elster! Game Over!\n");
-    fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
+    _enemyThatKilled = 2;
+    doDeath("Elster", playerPos);
     return;
   }
 
@@ -1640,65 +1425,9 @@ void FPEngine::_checkPlayerEnemyCollision() {
   float farinaVertDist = abs(playerPos.y - farinaPos.y);
 
   if (farinaDist < farinaMinDist && farinaVertDist < 2.0f) {
-    _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 30);
+    _enemyThatKilled = 3;
+    doDeath("Farina", playerPos);
     return;
-  }
-
-  for (auto enemy : _enemies) {
-    if (!enemy->isAlive() || enemy->isFalling())
-      continue;
-
-    glm::vec3 enemyPos = enemy->getPosition();
-
-    // Check horizontal distance
-    float distance = glm::length(
-        glm::vec2(playerPos.x - enemyPos.x, playerPos.z - enemyPos.z));
-    float minDistance = playerRadius + enemy->getRadius();
-
-    // player must be at roughly same height as enemy
-    float verticalDistance = abs(playerPos.y - enemyPos.y);
-
-    if (distance < minDistance && verticalDistance < maxVerticalDistance) {
-      // player die </3 rip
-      _characterDead = true;
-      _particleSystem->spawnBurst(playerPos, 30);
-      fprintf(stdout, "[INFO]: Player hit by enemy! Game Over!\n");
-      fprintf(stdout, "[INFO]: Coins collected: %d / 4\n", _coinsCollected);
-      return;
-    }
-  }
-}
-
-void FPEngine::_checkCoinCollection() {
-  if (_characterDead)
-    return;
-
-  glm::vec3 playerPos = _pCharacter->getPosition();
-
-  for (auto coin : _coins) {
-    if (coin->isCollected())
-      continue;
-
-    // distance to coin
-    float distance = glm::length(playerPos - coin->getPosition());
-
-    // collection radius
-    const float collectionRadius = 2.5f; // Larger collection radius
-
-    if (distance < collectionRadius) {
-      // Coin collected! hooray! yippee!
-      coin->setCollected(true);
-      _coinsCollected++;
-      _particleSystem->spawnBurst(coin->getPosition(), 15);
-      fprintf(stdout, "[INFO]: Coin collected! (%d / 4)\n", _coinsCollected);
-
-      if (_coinsCollected >= 4) {
-        fprintf(stdout,
-                "[INFO]: All coins collected! You win!\n"); // you get nothing
-                                                            // for winning lol
-      }
-    }
   }
 }
 

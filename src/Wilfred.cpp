@@ -42,7 +42,7 @@ void Wilfred::setProgramUniformLocations(
 
 void Wilfred::drawWilfred(glm::mat4 modelMtx, const glm::mat4 &viewMtx,
                           const glm::mat4 &projMtx) {
-  modelMtx = glm::translate(modelMtx, glm::vec3(_position.x, _position.y + 5.5f, _position.z));
+  modelMtx = glm::translate(modelMtx, glm::vec3(_position.x, _position.y + 3.5f, _position.z));
   // scale that bitch
   modelMtx = glm::scale(modelMtx, {7, 7, 7});
   // rotate the character to make him upright
@@ -234,6 +234,17 @@ void Wilfred::update(float deltaTime, const glm::vec3& heroPosition, float turnS
         float newAngle = currentAngle + turnAmount;
         _rotationAngle = newAngle;
         _headingVector = glm::normalize(glm::vec3(sin(newAngle), 0.0f, cos(newAngle)));
+    }
+}
+
+void Wilfred::bounceOff(const glm::vec3& otherPosition) {
+    // bounce direction after collision 
+    glm::vec3 bounceDir = _position - otherPosition;
+    bounceDir.y = 0.0f;
+
+    if (glm::length(bounceDir) > 0.01f) {
+        glm::vec3 headingVector = glm::normalize(bounceDir);
+        _rotationAngle = atan2(headingVector.x, headingVector.z);
     }
 }
 

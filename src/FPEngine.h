@@ -8,7 +8,6 @@
 
 #include "ArcballCam.hpp"
 #include "Character.h"
-#include "Coin.h"
 #include "Enemy.h"
 #include "Tympanius.h"
 #include "TympaniusShaderAttributeLocations.hpp"

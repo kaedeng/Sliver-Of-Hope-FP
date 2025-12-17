@@ -88,9 +88,9 @@ private:
     
     // character transform
     glm::vec3 _position;
-    float _heading; // rotation around Y axis
+    float _heading;
     glm::vec3 _headingVector; // normalized direction vector for pathfinding
-    float _moveSpeed; // movement speed for enemy AI
+    float _moveSpeed; // movement speed for enemy
 
     float lastDelt=0;
 

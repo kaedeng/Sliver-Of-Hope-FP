@@ -4,6 +4,7 @@
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 
+// Pure virtual class for a unified interface on enemies
 class Enemy {
 public:
     Enemy();

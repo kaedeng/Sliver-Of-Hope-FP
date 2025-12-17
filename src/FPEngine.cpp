@@ -1033,7 +1033,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
       _elsterShaderUniformLocations.cameraPosition, cameraPos);
 
   // In first-person view no need for the chraracter to get rendered
-  // TODO: set up the hands :o
   if (!_characterDead && _cam != _firstPersonCam) {
     glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
     _pCharacter->draw(glm::mat4(1.0f), viewMtx, projMtx);
@@ -1124,7 +1123,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
 
     // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
-    // Chromatic aberration offsets (0.01 - 0.03 for subtle, higher for dramatic)
 
     // Bind default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -1139,7 +1137,6 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     glUniform1i(_postShaderUniformLocations.sceneTexture, 0);
 
     // Red shifts one direction, blue shifts the other, green stays centered
-    // Use raw OpenGL calls since setProgramUniform may not handle glm::vec2
     glUniform2f(_postShaderUniformLocations.rOffset, aberrationStrength, 0.0f);
     glUniform2f(_postShaderUniformLocations.gOffset, 0.0f, 0.0f);
     glUniform2f(_postShaderUniformLocations.bOffset, -aberrationStrength, 0.0f);
@@ -1151,7 +1148,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
     glBindVertexArray(_quadVAO);
     glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0);
 
-    // Re-enable depth testing for next frame
+    // re-enable depth testing for next frame
     glDepthMask(GL_TRUE);
     glEnable(GL_DEPTH_TEST);
 }
@@ -1233,7 +1230,7 @@ void FPEngine::_updateScene() {
     // gravity
     const float gravity = -20.0f; // m/s^2
     const float groundOffset =
-        0.5f; // Offset to keep character slightly above ground
+        0.5f;
 
     // Use object height as the landing surface
     float surfaceHeight = terrainHeight;
@@ -1251,7 +1248,7 @@ void FPEngine::_updateScene() {
         _characterVerticalVelocity += gravity * deltaTime;
         charPos.y += _characterVerticalVelocity * deltaTime;
 
-        // Check if landed
+        // check if landed
         if (charPos.y <= targetHeight) {
           charPos.y = targetHeight;
           _characterVerticalVelocity = 0.0f;
@@ -1260,18 +1257,19 @@ void FPEngine::_updateScene() {
           _characterOnGround = false;
         }
       } else if (_characterVerticalVelocity > 0.0f) {
-        // Character is jumping, apply physics
+        // character is jumping, then apply physics
         _characterVerticalVelocity += gravity * deltaTime;
         charPos.y += _characterVerticalVelocity * deltaTime;
         _characterOnGround = false;
       } else {
-        // Character is on ground, snap to terrain
+        // character is on ground, then snap to terrain
         charPos.y = targetHeight;
         _characterVerticalVelocity = 0.0f;
         _characterOnGround = true;
       }
     } else {
-      // Character is out of bounds - falling to their death </3
+      // Character is out of bounds - falling to their death </3 - this is so sad... ;(
+      // not being used in the fp though lol
       _characterOnGround = false;
       _characterVerticalVelocity += gravity * deltaTime;
       charPos.y += _characterVerticalVelocity * deltaTime;
@@ -1288,7 +1286,7 @@ void FPEngine::_updateScene() {
     _pCharacter->setPosition(charPos);
   }
 
-  // Update character animations
+  // update character animations
   _pCharacter->update(deltaTime);
 
   // update enemies
@@ -1318,28 +1316,27 @@ void FPEngine::_updateScene() {
   // Farina
   _pFarina->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
 
-  // Terrain Collision / Gravity Resolution
   glm::vec3 farinaPos = _pFarina->getPosition();
   float terrainHeight = _getTerrainHeight(farinaPos.x, farinaPos.z);
 
-  // Simple collision: Keep on the ground
+  // collision
   glm::vec3 newFarinaPos = _checkAndResolveCollisions(
       glm::vec3(farinaPos.x, terrainHeight + 1.0f, farinaPos.z),
       _pFarina->getRadius());
 
   _pFarina->setPosition(newFarinaPos);
 
-  // Update eye light positions for all enemies
+  // update eye light positions for all enemies
   _updateEyeLightPositions();
 
-  // Update particle system
+  // update particle system
   _particleSystem->update(deltaTime);
 
-  // Check collisions
+  // check collisions
   _checkEnemyCollisions();
   _checkPlayerEnemyCollision();
 
-  // Update camera to follow character
+  // update camera to follow character
   if (_cam == _arcBallCam) {
     _arcBallCam->setLookAtPoint(_pCharacter->getPosition() +
                                 glm::vec3(0.0f, 5.0f, 0.0f));
@@ -1355,7 +1352,7 @@ void FPEngine::_updateScene() {
       // update camera position to match character
       _firstPersonCam->setPosition(cameraPos);
 
-      // Camera should look in the direction the character is facing
+      // camera should look in the direction the character is facing
       float characterHeading = _pCharacter->getHeading();
       _firstPersonCam->setTheta(-characterHeading);
       _firstPersonCam->setPhi(_cameraPitch);
@@ -1444,10 +1441,7 @@ void FPEngine::run() {
     float deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    // Get the size of our framebuffer.  Ideally this should be the same
-    // dimensions as our window, but when using a Retina display the actual
-    // window can be larger than the requested window.  Therefore, query what
-    // the actual size of the window we are rendering to is.
+    // Get the size of our framebuffer.
     GLint framebufferWidth, framebufferHeight;
     glfwGetFramebufferSize(mpWindow, &framebufferWidth, &framebufferHeight);
 
@@ -1458,23 +1452,23 @@ void FPEngine::run() {
     glm::mat4 mainProjectionMatrix =
         glm::perspective(45.0f, mainAspectRatio, 0.1f, 1000.0f);
 
-    // Render main camera view (full screen)
+    // Render main camera view
     glViewport(0, 0, framebufferWidth, framebufferHeight);
     _renderScene(_cam->getViewMatrix(), mainProjectionMatrix,
                  _cam->getPosition());
 
     if (_minimapVisible) {
-      // Clear depth buffer for minimap viewport
+      // clear depth buffer for minimap viewport
       glClear(GL_DEPTH_BUFFER_BIT);
 
-      // Minimap viewport dimensions at the top right corner
+      // minimap viewport dimensions at the top right corner
       GLint minimapWidth = framebufferHeight / 5;
       GLint minimapHeight = framebufferHeight / 5;
       GLint minimapX = framebufferWidth - minimapWidth - 20;
       GLint minimapY = framebufferHeight - minimapHeight - 20;
 
       // Use orthographic projection for minimap
-      float orthoSize = 30.0f; // View area size
+      float orthoSize = 30.0f;
       float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
       glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);
 
@@ -1485,32 +1479,32 @@ void FPEngine::run() {
       glEnable(GL_SCISSOR_TEST);
       glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
 
-      // clear color (match floor color)
+      // clear color 
       glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
 
       // Create a simple top-down view matrix - camera high above terrain
       glm::vec3 charPos = _pCharacter->getPosition();
-      glm::vec3 eye = glm::vec3(charPos.x, 200.0f, charPos.z);  // High above terrain
+      glm::vec3 eye = glm::vec3(charPos.x, 200.0f, charPos.z);
       glm::vec3 center = glm::vec3(charPos.x, 0.0f, charPos.z);
-      glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f); // -Z is up in this view
+      glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f);
       glm::mat4 minimapViewMatrix = glm::lookAt(eye, center, up);
 
       _renderMinimap(minimapViewMatrix, minimapProjectionMatrix);
 
-      // Disable scissor test
+      // disable scissor test
       glDisable(GL_SCISSOR_TEST);
     }
 
     _updateScene();
 
     glfwSwapBuffers(
-        mpWindow); // flush the OpenGL commands and make sure they get rendered!
-    glfwPollEvents(); // check for any events and signal to redraw screen
+        mpWindow); 
+    glfwPollEvents(); 
   }
 }
 
 void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
-  // Clear the minimap viewport
+  // clear the minimap viewport
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glm::vec3 charPos = _pCharacter->getPosition();
@@ -1522,14 +1516,14 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx
   minimapRoot = glm::rotate(minimapRoot, yaw, glm::vec3(0,1,0)); // rotate
   minimapRoot = glm::translate(minimapRoot, -charPos);       // move back
 
-  // Use flat shader for minimap
+  // using flat shader for minimap
   _flatShaderProgram->useProgram();
   CSCI441::setVertexAttributeLocations(_flatShaderAttributeLocations.vPos, _flatShaderAttributeLocations.vNormal);
 
-  // Set light direction once (pointing down for top-down view)
+  // Set light direction
   _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.lightDirection, glm::vec3(0.0f, -1.0f, 0.0f));
 
-  // Draw a large flat plane for the ground
+  // draw a large flat plane for the ground
   glm::mat4 groundModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f));
   groundModelMtx = glm::scale(groundModelMtx, glm::vec3(200.0f, 1.0f, 200.0f));
   groundModelMtx = minimapRoot * groundModelMtx;
@@ -1598,8 +1592,9 @@ void FPEngine::_computeAndSendMatrixUniforms(const glm::mat4 &modelMtx,
       _textureShaderUniformLocations.modelMatrix, modelMtx);
 }
 
+// this doesn't exactly look like how we wanted it to look, but it still is point lights at the eye areas.
 void FPEngine::_updateEyeLightPositions() {
-  // Hardcoded eye offsets
+  // hardcoded eye offsets
   const float eyeHeightOffset = 1.5f;
   const float eyeLateralOffset = 0.15f;  // distance between eyes
   const float eyeForwardOffset = 1.0f;   // how far forward from center
@@ -1680,10 +1675,10 @@ void FPEngine::_updateEyeLightPositions() {
 float FPEngine::_getTerrainHeight(float x, float z) const {
   // Check if position is within terrain bounds
   if (x < -WORLD_SIZE || x > WORLD_SIZE || z < -WORLD_SIZE || z > WORLD_SIZE) {
-    return -1000.0f; // Return very low height if out of bounds (for falling)
+    return -1000.0f; // Return very low height if out of bounds
   }
 
-  // Hill height parameter (matching shader)
+  // Hill height parameter
   const float hillHeight = 56.25f;
   return hillHeight;
 }
@@ -1694,7 +1689,7 @@ glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
   glm::vec2 charPosXZ = glm::vec2(position.x, position.z);
   // characterRadius += 1.0f;
 
-  // Check collision with walls
+  // check collision with walls
   for (const auto &wall : _walls) {
     glm::vec3 wallCenter = wall.position;
     float wallRadius = wall.size;

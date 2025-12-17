@@ -8,11 +8,12 @@
 
 #include "Character.h"
 #include "Enemy.h"
+#include "Farina.h"
+#include "KillerBall.h"
+#include "ParticleSystem.h"
 #include "Tympanius.h"
 #include "TympaniusShaderAttributeLocations.hpp"
 #include "TympaniusShaderUniformLocations.hpp"
-#include "Farina.h"
-#include "ParticleSystem.h"
 #include "Wilfred.h"
 
 #include "Skybox.h"
@@ -103,7 +104,7 @@ private:
   CSCI441::Camera *_cam;
   CSCI441::FreeCam *_firstPersonCam;
   CSCI441::FreeCam *_minimapCam; // Top-down camera for minimap
-  float _minimapHeight; // Height of the minimap camera
+  float _minimapHeight;          // Height of the minimap camera
   bool _minimapVisible = true; // Whether the minimap is visible (toggle with H)
   /// \desc pair of values to store the speed the camera can move/rotate.
   /// \brief x = forward/backward delta, y = rotational delta
@@ -117,7 +118,8 @@ private:
   Wilfred *_pWilfred;
   Character *_pEnemyElster;
   Farina *_pFarina;
-  std::vector<Enemy*> _enemies;
+  KillerBall *_pKillerBall;
+  std::vector<Enemy *> _enemies;
 
   float aberrationStrength = 0.02f;
   float rNoise = 0;
@@ -129,7 +131,8 @@ private:
   float _characterVerticalVelocity;
   bool _characterOnGround;
   bool _characterDead;
-  int _enemyThatKilled = -1; // 0 = Tympanius, 1 = Wilfred, 2 = Elster, 3 = Farina
+  int _enemyThatKilled =
+      -1; // 0 = Tympanius, 1 = Wilfred, 2 = Elster, 3 = Farina
   float _deathEasingParam = 0;
 
   Skybox *_pSkybox;
@@ -201,15 +204,15 @@ private:
 
   static constexpr int NUM_EYE_LIGHTS = 8; // 2 eyes, 4 enemies
   struct TextureShaderAttributeLocations {
-        /// \desc vertex position location
-        GLint vPos;
-        /// \desc vertex normal location
-        /// \note not used in this lab
-        GLint vNormal;
-        // TODO #10 - texture coordinate
-        GLint texCoord;
+    /// \desc vertex position location
+    GLint vPos;
+    /// \desc vertex normal location
+    /// \note not used in this lab
+    GLint vNormal;
+    // TODO #10 - texture coordinate
+    GLint texCoord;
 
-    } _textureShaderAttributeLocations;
+  } _textureShaderAttributeLocations;
 
   // Shaders for elster
   CSCI441::ShaderProgram *_elsterShaderProgram;
@@ -245,11 +248,12 @@ private:
   } _elsterShaderAttributeLocations;
 
   /// \desc shader program that performs lighting
-    CSCI441::ShaderProgram* _tympaniusShaderProgram ;   // the wrapper for our shader program
-    /// \desc stores the locations of all of our shader uniforms
-    TympaniusShaderUniformLocations _tympaniusShaderUniformLocations;
-    /// \desc stores the locations of all of our shader attributes
-    TympaniusShaderAttributeLocations _tympaniusShaderAttributeLocations;
+  CSCI441::ShaderProgram
+      *_tympaniusShaderProgram; // the wrapper for our shader program
+  /// \desc stores the locations of all of our shader uniforms
+  TympaniusShaderUniformLocations _tympaniusShaderUniformLocations;
+  /// \desc stores the locations of all of our shader attributes
+  TympaniusShaderAttributeLocations _tympaniusShaderAttributeLocations;
 
   // tess shaders for ground
   CSCI441::ShaderProgram *_groundTessShaderProgram;
@@ -340,8 +344,7 @@ private:
   // gets the height of the tallest object at a given position
   float _getObjectHeightAt(float x, float z) const;
 
-  
-  void doDeath(const char* killerName, glm::vec3 playerPos);
+  void doDeath(const char *killerName, glm::vec3 playerPos);
 
   /// \desc precomputes the matrix uniforms CPU-side and then sends them
   /// to the GPU to be used in the shader for each vertex.  It is more efficient

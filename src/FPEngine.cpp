@@ -39,7 +39,6 @@ FPEngine::FPEngine()
 }
 
 FPEngine::~FPEngine() {
-  delete _arcBallCam;
   delete _firstPersonCam;
   delete _minimapCam;
   delete _pCharacter;
@@ -618,12 +617,6 @@ void FPEngine::_createGroundBuffers() {
 }
 
 void FPEngine::mSetupScene() {
-  // Create and position the arcball camera - at character height
-  _arcBallCam = new CSCI441::ArcballCam();
-  _arcBallCam->setPosition(glm::vec3(0.0f, 40.0f, 30.0f));
-  _arcBallCam->setLookAtPoint(glm::vec3(0.0f, 35.0f, 0.0f));
-  _arcBallCam->recomputeOrientation();
-
   _pSkybox = new Skybox();
 
   _pCharacter = new Character(_elsterShaderProgram->getShaderProgramHandle(),
@@ -1337,11 +1330,7 @@ void FPEngine::_updateScene() {
   _checkPlayerEnemyCollision();
 
   // update camera to follow character
-  if (_cam == _arcBallCam) {
-    _arcBallCam->setLookAtPoint(_pCharacter->getPosition() +
-                                glm::vec3(0.0f, 5.0f, 0.0f));
-    _arcBallCam->recomputeOrientation();
-  } else if (_cam == _firstPersonCam) {
+  if (_cam == _firstPersonCam) {
     glm::vec3 spotLightPosition;
     glm::vec3 spotLightDirection;
     if(!_characterDead){  

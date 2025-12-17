@@ -6,7 +6,6 @@
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
 
-#include "ArcballCam.hpp"
 #include "Character.h"
 #include "Enemy.h"
 #include "Tympanius.h"
@@ -100,7 +99,6 @@ private:
 
   /// \desc the arcball camera in our world
   CSCI441::Camera *_cam;
-  CSCI441::ArcballCam *_arcBallCam;
   CSCI441::FreeCam *_firstPersonCam;
   CSCI441::FreeCam *_minimapCam; // Top-down camera for minimap
   float _minimapHeight; // Height of the minimap camera

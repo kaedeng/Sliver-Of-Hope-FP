@@ -115,6 +115,11 @@ private:
   Farina *_pFarina;
   std::vector<Enemy*> _enemies;
 
+  float aberrationStrength = 0.02f;
+  float rNoise = 0;
+  float gNoise = 0;
+  float bNoise = 0;
+
   float _characterMoveSpeed;
   float _characterTurnSpeed;
   float _characterVerticalVelocity;
@@ -152,7 +157,12 @@ private:
   };
   std::vector<BushData> _bushes;
 
-  void _createQuad(GLuint VAO, GLuint VBO, GLuint IBO, GLsizei& numVAOPoints) const;
+  GLuint _quadVAO;
+  GLuint _quadVBO;
+  GLuint _quadIBO;
+  GLsizei _numQuadVAOPoints = 0;
+
+  void _createQuad();
 
   /// \desc generates tree information to make up our scene
   void _generateEnvironment();
@@ -262,11 +272,31 @@ private:
     GLint spriteTexture;
   } _spriteShaderUniformLocations;
 
+  CSCI441::ShaderProgram *_postShaderProgram;
+  struct PostShaderUniformLocations {
+    GLint mvpMatrix;
+    GLint sceneTexture;
+    GLint rOffset;
+    GLint gOffset;
+    GLint bOffset;
+    GLint rNoise;
+    GLint gNoise;
+    GLint bNoise;
+
+  } _postShaderUniformLocations;
+  struct PostShaderAttributeLocations {
+    GLint vPos;
+    GLint texCoord;
+  } _postShaderAttributeLocations;
+
   /// \desc set the lighting parameters to the shader
   void _setLightingParameters();
 
   // check collision between enemies
   void _checkEnemyCollisions();
+
+  // get closest enemy's distance to player
+  float _getEnemyDistance();
 
   // check collision between player and enemies
   void _checkPlayerEnemyCollision();

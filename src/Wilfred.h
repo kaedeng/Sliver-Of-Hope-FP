@@ -5,12 +5,14 @@
 #ifndef A3IMSOTIRED_WILFRED_H
 #define A3IMSOTIRED_WILFRED_H
 
+#include "Enemy.h"
+
 #include <glad/gl.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 
-class Wilfred {
+class Wilfred : public Enemy {
 public:
   /// \desc creates a simple plane that gives the appearance of flight
   /// \param shaderProgramHandle shader program handle that the plane should be
@@ -48,15 +50,15 @@ public:
 
   // moving
   // Gets the hero's position.
-  glm::vec3 getPosition() const;
+  glm::vec3 getPosition() const override;
 
   // Sets the hero's position.
-  void setPosition(glm::vec3 position);
+  void setPosition(glm::vec3 position) override;
   // Sets the hero's angle
   void setAngle(GLfloat angle);
   GLfloat getAngle();
 
-    float getRadius() const { return _radius; }
+  float getRadius() const override { return _radius; }
 
   /// animation
   void _animateBro();
@@ -67,7 +69,9 @@ public:
   void setAlive(bool alive) { _alive = alive; }
   void setFalling(bool falling) { _falling = falling; }
 
-    void update(float deltaTime, const glm::vec3& heroPosition, float turnSpeed);
+  void update(float deltaTime, const glm::vec3& heroPosition, float turnSpeed);
+    
+  void bounceOff(const glm::vec3& otherPosition) override;
 
 private:
   // SHADER HANDLES AND LOCATIONS

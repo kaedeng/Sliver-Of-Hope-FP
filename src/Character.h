@@ -1,5 +1,6 @@
 #ifndef CHARACTER_H
 #define CHARACTER_H
+#include "Enemy.h"
 
 #include <glad/gl.h>
 #include <glm/glm.hpp>
@@ -17,7 +18,7 @@ namespace tinygltf {
     class Animation;
 }
 
-class Character {
+class Character : public Enemy {
 public:
     Character(
         GLuint shaderProgramHandle,
@@ -47,10 +48,13 @@ public:
     void moveBackward(float amount);
     void turnLeft(float angle);
     void turnRight(float angle);
+    void bounceOff(const glm::vec3 &otherPosition) override;
     
-    glm::vec3 getPosition() const { return _position; }
-    void setPosition(const glm::vec3& position);
+    
+    glm::vec3 getPosition() const override { return _position; }
+    void setPosition(glm::vec3 position) override;
     float getHeading() const { return _heading; }
+    float getRadius() const override { return 0.5;}
 
     // Update shader references after shader reload
     void updateShaderReferences(

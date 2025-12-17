@@ -1,6 +1,8 @@
 #ifndef TYMPANIUS_H
 #define TYMPANIUS_H
 
+#include "Enemy.h"
+
 #include <glad/gl.h>
 #include <glm/glm.hpp>
 
@@ -11,7 +13,7 @@
 #include "TympaniusShaderUniformLocations.hpp"
 #include "TympaniusShaderAttributeLocations.hpp"
 
-class Tympanius
+class Tympanius : public Enemy
 {
 public:
     Tympanius(CSCI441::ShaderProgram *shaderProgram, TympaniusShaderUniformLocations* shaderUniformLocations, TympaniusShaderAttributeLocations* shaderAttributeLocations);
@@ -21,16 +23,16 @@ public:
     void update(GLfloat deltaTime, const glm::vec3& heroPosition, float turnSpeed);
 
     // Bounce off other objects
-    void bounceOff(const glm::vec3& otherPosition);
+    void bounceOff(const glm::vec3& otherPosition) override;
 
     // Draws tympanius
     void draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
 
     // Returns tympanius's position
-    glm::vec3 getPosition() const { return glm::vec3(_position.x, _position.y-_floatingHeight, _position.z); }
+    glm::vec3 getPosition() const override { return glm::vec3(_position.x, _position.y-_floatingHeight, _position.z); }
 
     // Sets tympanius's position
-    void setPosition(glm::vec3 position) { _position = glm::vec3(position.x, position.y+_floatingHeight, position.z); }
+    void setPosition(glm::vec3 position) override { _position = glm::vec3(position.x, position.y+_floatingHeight, position.z); }
 
     // Sets floor height
     void setFloorHeight(GLfloat floorHeight) { _floorHeight = floorHeight; }
@@ -58,7 +60,7 @@ public:
 
     void setVelocity(glm::vec3 velocity) { _velocity = velocity; }
     
-    GLfloat getRadius() const { return 1.75f; }
+    GLfloat getRadius() const override { return 1.75f; }
     
     bool isFalling() const { return _falling; }
 

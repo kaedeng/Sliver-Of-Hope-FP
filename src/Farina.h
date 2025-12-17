@@ -1,6 +1,8 @@
 #ifndef FARINA_H
 #define FARINA_H
 
+#include "Enemy.h"
+
 #include <glad/gl.h>
 
 #include <glm/glm.hpp>
@@ -8,7 +10,7 @@
 #include <CSCI441/objects.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-class Farina {
+class Farina : public Enemy {
 public:
   Farina(GLuint shaderProgramHandle, GLint mvpMtxUniformLocation,
          GLint materialColorUniformLocation, GLint normalMtxUniformLocation,
@@ -22,11 +24,11 @@ public:
   void draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx);
 
   // Causes Farina to bounce away from a collision point
-  void bounceOff(const glm::vec3 &otherPosition);
+  void bounceOff(const glm::vec3 &otherPosition) override;
 
   // Get & set Farina's position.
-  glm::vec3 getPosition() const;
-  void setPosition(glm::vec3 position);
+  glm::vec3 getPosition() const override;
+  void setPosition(glm::vec3 position) override;
 
   // Get & set Farina's heading.
   glm::vec3 getHeading() const;
@@ -37,7 +39,7 @@ public:
   void setAngle(GLfloat angle);
 
   // Get Farina's radius.
-  float getRadius() const;
+  float getRadius() const override;
 
 private:
   glm::vec3 _position;

@@ -941,13 +941,14 @@ void Character::turnRight(float angle) {
 }
 
 void Character::bounceOff(const glm::vec3& otherPosition) {
-    // bounce direction after collision 
+    // bounce direction after collision
     glm::vec3 bounceDir = _position - otherPosition;
     bounceDir.y = 0.0f;
 
     if (glm::length(bounceDir) > 0.01f) {
-        glm::vec3 headingVector = glm::normalize(bounceDir);
-        _heading = atan2(headingVector.x, headingVector.z);
+        glm::vec3 newHeading = glm::normalize(bounceDir);
+        _heading = atan2(newHeading.x, newHeading.z);
+        _headingVector = newHeading;  // Update movement direction
     }
 }
 

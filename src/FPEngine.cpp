@@ -31,7 +31,8 @@ FPEngine::FPEngine()
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr){
+      _characterDead(false), _particleSystem(nullptr),
+      _minimapCam(nullptr), _minimapHeight(25.0f), _flatShaderProgram(nullptr){
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -40,6 +41,7 @@ FPEngine::FPEngine()
 FPEngine::~FPEngine() {
   delete _arcBallCam;
   delete _firstPersonCam;
+  delete _minimapCam;
   delete _pCharacter;
   delete _pTympanius;
   delete _pWilfred;
@@ -50,6 +52,7 @@ FPEngine::~FPEngine() {
     delete _textureShaderProgram;
   delete _pSkybox;
   delete _spriteShaderProgram;
+  delete _flatShaderProgram;
   delete _particleSystem;
 }
 
@@ -77,11 +80,15 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _elsterShaderUniformLocations.materialDiffuse,
           _elsterShaderUniformLocations.materialSpecular,
           _elsterShaderUniformLocations.materialShininess);
+      
       _pWilfred = new Wilfred(_textureShaderProgram->getShaderProgramHandle(),
                               _textureShaderUniformLocations.mvpMatrix,
                               _textureShaderUniformLocations.normalMatrix,
                               _textureShaderUniformLocations.materialColor,
                               _textureShaderUniformLocations.modelMatrix);
+
+      _pTympanius->updateShaderReferences(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
+      
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -91,10 +98,9 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _groundTessShaderProgram->getAttributeLocation("vTexCoord");
       break;
 
-      // Camera switching delete
-      // TODO: have a disable minimap once created
-      // case GLFW_KEY_1:
-      // case GLFW_KEY_2:
+    case GLFW_KEY_H:
+      _minimapVisible = !_minimapVisible;
+      break;
 
     default:
       break; // suppress CLion warning
@@ -182,6 +188,7 @@ void FPEngine::mSetupGLFW() {
   glfwSetKeyCallback(mpWindow, mp_engine_keyboard_callback);
   glfwSetMouseButtonCallback(mpWindow, mp_engine_mouse_button_callback);
   glfwSetCursorPosCallback(mpWindow, mp_engine_cursor_callback);
+  glfwSetInputMode(mpWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void FPEngine::mSetupOpenGL() {
@@ -347,6 +354,28 @@ void FPEngine::mSetupShaders() {
       _spriteShaderProgram->getUniformLocation("mvpMatrix");
   _spriteShaderUniformLocations.spriteTexture =
       _spriteShaderProgram->getUniformLocation("spriteTexture");
+
+  // load flat shader for minimap
+  _flatShaderProgram = new CSCI441::ShaderProgram("shaders/flat.v.glsl",
+                                                  "shaders/flat.f.glsl");
+
+  // get uniform locations for flat shader
+  _flatShaderUniformLocations.mvpMatrix =
+      _flatShaderProgram->getUniformLocation("mvpMatrix");
+  _flatShaderUniformLocations.modelMatrix =
+      _flatShaderProgram->getUniformLocation("modelMatrix");
+  _flatShaderUniformLocations.normalMatrix =
+      _flatShaderProgram->getUniformLocation("normalMatrix");
+  _flatShaderUniformLocations.materialColor =
+      _flatShaderProgram->getUniformLocation("materialColor");
+  _flatShaderUniformLocations.lightDirection =
+      _flatShaderProgram->getUniformLocation("lightDirection");
+
+  // get attribute locations for flat shader
+  _flatShaderAttributeLocations.vPos =
+      _flatShaderProgram->getAttributeLocation("vPos");
+  _flatShaderAttributeLocations.vNormal =
+      _flatShaderProgram->getAttributeLocation("vNormal");
 
     // texture shader
     _textureShaderProgram = new CSCI441::ShaderProgram("shaders/lab06.v.glsl", "shaders/lab06.f.glsl" );
@@ -624,9 +653,9 @@ void FPEngine::mSetupScene() {
     fprintf(stderr, "Failed to load enemy Elster model\n");
   }
 
-  // starting pos for enemy elster
-  float elsterStartX = -10.0f;
-  float elsterStartZ = -10.0f;
+  // starting pos for enemy elster (moved away from walls)
+  float elsterStartX = 0.0f;
+  float elsterStartZ = 0.0f;
   float elsterStartY = _getTerrainHeight(elsterStartX, elsterStartZ) + 1.0f;
   _pEnemyElster->setPosition(
       glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
@@ -736,6 +765,8 @@ void FPEngine::mCleanupShaders() {
   _groundTessShaderProgram = nullptr;
   delete _spriteShaderProgram;
   _spriteShaderProgram = nullptr;
+  delete _flatShaderProgram;
+  _flatShaderProgram = nullptr;
     delete _textureShaderProgram;
     _textureShaderProgram = nullptr;
 }
@@ -792,7 +823,7 @@ void FPEngine::_generateEnvironment() {
   const glm::vec2 coinCorners[4] = {
       glm::vec2(-coinOffset, -coinOffset), glm::vec2(coinOffset, -coinOffset),
       glm::vec2(-coinOffset, coinOffset), glm::vec2(coinOffset, coinOffset)};
-    // read in map file for bushes
+    // read in map file for walls
     std::string line;
     std::string square;
     // open file
@@ -810,17 +841,14 @@ void FPEngine::_generateEnvironment() {
             while (lineStream >> square) {
                 if (square == "x") {
                     // put a wall here
-                    BushData bush;
-                    bush.size = width/2;
-                    float bushX = LEFT_END_POINT+(col*width);
-                    float bushZ = BOTTOM_END_POINT+(row*height);
-                    float terrainY = _getTerrainHeight(bushX, bushZ);
-                    // bush sits on the terrain
-                    bush.position = glm::vec3(bushX, terrainY + bush.size, bushZ);
-                    bush.color = glm::vec3(0.086 + (getRand() - 2) * 0.15,
-                                           0.588 + (getRand() - 2) * 0.15,
-                                           0.455 + (getRand() - 2) * 0.15);
-                    _bushes.push_back(bush);
+                    WallData wall;
+                    wall.size = width/2;
+                    float wallX = LEFT_END_POINT+(col*width);
+                    float wallZ = BOTTOM_END_POINT+(row*height);
+                    float terrainY = _getTerrainHeight(wallX, wallZ);
+                    // wall sits on the terrain
+                    wall.position = glm::vec3(wallX, terrainY + wall.size, wallZ);
+                    _walls.push_back(wall);
                 }
                 col++;
             }
@@ -992,19 +1020,19 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
     glBindTexture(GL_TEXTURE_2D, _texHandles[TEXTURE_ID::WALL]);
 
-  for (const auto &bush : _bushes) {
-    glm::mat4 bushModelMtx = glm::translate(glm::mat4(1.0f), bush.position);
-    bushModelMtx = glm::scale(bushModelMtx, glm::vec3(bush.size, bush.size*4.0f, bush.size));
-    glm::mat4 TmvpMtx = projMtx * viewMtx * bushModelMtx;
-    const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(bushModelMtx)));
+  for (const auto &wall : _walls) {
+    glm::mat4 wallModelMtx = glm::translate(glm::mat4(1.0f), wall.position);
+    wallModelMtx = glm::scale(wallModelMtx, glm::vec3(wall.size, wall.size*4.0f, wall.size));
+    glm::mat4 TmvpMtx = projMtx * viewMtx * wallModelMtx;
+    const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(wallModelMtx)));
 
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.mvpMatrix, TmvpMtx);
-    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.modelMatrix, bushModelMtx);
+    _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.modelMatrix, wallModelMtx);
     _textureShaderProgram->setProgramUniform(_textureShaderUniformLocations.normalMatrix, normalMtx);
     
     
     //_lightingShaderProgram->setProgramUniform(
-        //_lightingShaderUniformLocations.materialColor, bush.color);
+        //_lightingShaderUniformLocations.materialColor, wall.color);
 
       CSCI441::drawSolidCubeTextured(2.0f);
   }
@@ -1135,8 +1163,7 @@ void FPEngine::_updateScene() {
     glm::vec3 charPos = _pCharacter->getPosition();
 
     // collision detection to current position
-    const float CHARACTER_RADIUS = 0.5f;
-    charPos = _checkAndResolveCollisions(charPos, CHARACTER_RADIUS);
+    charPos = _checkAndResolveCollisions(charPos, _pCharacter->getRadius());
 
     // terrain height at the characters current pos
     float terrainHeight = _getTerrainHeight(charPos.x, charPos.z);
@@ -1216,7 +1243,7 @@ void FPEngine::_updateScene() {
 
   _pWilfred->update(deltaTime, _pCharacter->getPosition(), enemyTurnSpeed);
   glm::vec3 wilfPos = _pWilfred->getPosition();
-  glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), 0.5f);
+  glm::vec3 newwilfPos = _checkAndResolveCollisions(glm::vec3(wilfPos.x, _getTerrainHeight(wilfPos.x, wilfPos.z) + 1.0f, wilfPos.z), _pWilfred->getRadius());
   _pWilfred->setPosition(glm::vec3(newwilfPos.x, wilfPos.y, newwilfPos.z));
 
   // update enemy elster
@@ -1225,7 +1252,7 @@ void FPEngine::_updateScene() {
   float elsterTerrainHeight =
       _getTerrainHeight(elsterPos.x, elsterPos.z) + 1.0f;
   glm::vec3 newElsterPos = _checkAndResolveCollisions(
-      glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), 0.5f);
+      glm::vec3(elsterPos.x, elsterTerrainHeight, elsterPos.z), _pEnemyElster->getRadius());
   _pEnemyElster->setPosition(
       glm::vec3(newElsterPos.x, elsterTerrainHeight, newElsterPos.z));
 
@@ -1374,11 +1401,107 @@ void FPEngine::run() {
     _renderScene(_cam->getViewMatrix(), mainProjectionMatrix,
                  _cam->getPosition());
 
+    if (_minimapVisible) {
+      // Clear depth buffer for minimap viewport
+      glClear(GL_DEPTH_BUFFER_BIT);
+
+      // Minimap viewport dimensions at the top right corner
+      GLint minimapWidth = framebufferHeight / 5;
+      GLint minimapHeight = framebufferHeight / 5;
+      GLint minimapX = framebufferWidth - minimapWidth - 20;
+      GLint minimapY = framebufferHeight - minimapHeight - 20;
+
+      // Use orthographic projection for minimap
+      float orthoSize = 30.0f; // View area size
+      float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
+      glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);
+
+      // render minimap view
+      glViewport(minimapX, minimapY, minimapWidth, minimapHeight);
+
+      // scissor test to only clear this viewport
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
+
+      // clear color (match floor color)
+      glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+
+      // Create a simple top-down view matrix - camera high above terrain
+      glm::vec3 charPos = _pCharacter->getPosition();
+      glm::vec3 eye = glm::vec3(charPos.x, 200.0f, charPos.z);  // High above terrain
+      glm::vec3 center = glm::vec3(charPos.x, 0.0f, charPos.z);
+      glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f); // -Z is up in this view
+      glm::mat4 minimapViewMatrix = glm::lookAt(eye, center, up);
+
+      _renderMinimap(minimapViewMatrix, minimapProjectionMatrix);
+
+      // Disable scissor test
+      glDisable(GL_SCISSOR_TEST);
+    }
+
     _updateScene();
 
     glfwSwapBuffers(
         mpWindow); // flush the OpenGL commands and make sure they get rendered!
     glfwPollEvents(); // check for any events and signal to redraw screen
+  }
+}
+
+void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
+  // Clear the minimap viewport
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glm::vec3 charPos = _pCharacter->getPosition();
+
+  // Use flat shader for minimap
+  _flatShaderProgram->useProgram();
+  CSCI441::setVertexAttributeLocations(_flatShaderAttributeLocations.vPos, _flatShaderAttributeLocations.vNormal);
+
+  // Set light direction once (pointing down for top-down view)
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.lightDirection, glm::vec3(0.0f, -1.0f, 0.0f));
+
+  // Draw a large flat plane for the ground
+  glm::mat4 groundModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f));
+  groundModelMtx = glm::scale(groundModelMtx, glm::vec3(200.0f, 1.0f, 200.0f));
+  glm::mat4 mvpMtx = projMtx * viewMtx * groundModelMtx;
+  glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(groundModelMtx)));
+
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.mvpMatrix, mvpMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.modelMatrix, groundModelMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(0.15f, 0.15f, 0.15f));  // Dark floor
+
+  CSCI441::drawSolidCube(1.0f);
+
+  // Draw character marker as a bright colored cube
+  glm::mat4 charModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(charPos.x, 5.0f, charPos.z));
+  charModelMtx = glm::scale(charModelMtx, glm::vec3(2.0f, 2.0f, 2.0f));
+  mvpMtx = projMtx * viewMtx * charModelMtx;
+  normalMtx = glm::transpose(glm::inverse(glm::mat3(charModelMtx)));
+
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.mvpMatrix, mvpMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.modelMatrix, charModelMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(0.0f, 0.8f, 1.0f));  // Cyan for player
+
+  CSCI441::drawSolidCube(1.0f);
+
+  // Draw all enemies as red cubes
+  for (const auto& enemy : _enemies) {
+    if (enemy) {
+      glm::vec3 enemyPos = enemy->getPosition();
+      glm::mat4 enemyModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(enemyPos.x, 5.0f, enemyPos.z));
+      enemyModelMtx = glm::scale(enemyModelMtx, glm::vec3(2.0f, 2.0f, 2.0f));
+      mvpMtx = projMtx * viewMtx * enemyModelMtx;
+      normalMtx = glm::transpose(glm::inverse(glm::mat3(enemyModelMtx)));
+
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.mvpMatrix, mvpMtx);
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.modelMatrix, enemyModelMtx);
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));  // Red for enemy
+
+      CSCI441::drawSolidCube(1.0f);
+    }
   }
 }
 
@@ -1419,16 +1542,16 @@ glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
                                                float characterRadius) const {
   glm::vec3 correctedPos = position;
   glm::vec2 charPosXZ = glm::vec2(position.x, position.z);
-  characterRadius += 2.0f;
+  // characterRadius += 1.0f;
 
-  // Check collision with bushes
-  for (const auto &bush : _bushes) {
-    glm::vec3 bushCenter = bush.position;
-    float bushRadius = bush.size;
-    float extent = bushRadius + characterRadius;
+  // Check collision with walls
+  for (const auto &wall : _walls) {
+    glm::vec3 wallCenter = wall.position;
+    float wallRadius = wall.size;
+    float extent = wallRadius + characterRadius;
 
-    float dx = correctedPos.x - bushCenter.x;
-    float dz = correctedPos.z - bushCenter.z;
+    float dx = correctedPos.x - wallCenter.x;
+    float dz = correctedPos.z - wallCenter.z;
 
     float overlapX = extent - std::abs(dx);
     float overlapZ = extent - std::abs(dz);
@@ -1467,19 +1590,16 @@ float FPEngine::_getEnemyDistance() {
 
 
 float FPEngine::_getObjectHeightAt(float x, float z) const {
-  const float CHARACTER_RADIUS =
-      0.5f; // Match this with character collision radius
-
-  // treat bushes as having a flat top for landing
-  for (const auto &bush : _bushes) {
+  // treat walls as having a flat top
+  for (const auto &wall : _walls) {
     glm::vec2 charPosXZ(x, z);
-    glm::vec2 bushPosXZ(bush.position.x, bush.position.z);
-    float distance = glm::length(charPosXZ - bushPosXZ);
-    float bushRadius = bush.size;
+    glm::vec2 wallPosXZ(wall.position.x, wall.position.z);
+    float distance = glm::length(charPosXZ - wallPosXZ);
+    float wallRadius = wall.size;
 
-    if (distance < bushRadius * 1.2f) {
-      // Return the top of the bush
-      return bush.position.y + bushRadius;
+    if (distance < wallRadius * 1.2f) {
+      // Return the top of the wall
+      return wall.position.y + wallRadius;
     }
   }
 

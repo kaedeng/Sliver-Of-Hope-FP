@@ -65,6 +65,8 @@ private:
   //  param cameraPos: the position of the camera for lighting shenanigans
   void _renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                     const glm::vec3 &cameraPos) const;
+  /// renders the minimap with flat shading
+  void _renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const;
   /// \desc handles moving our camera as determined by keyboard input
   void _updateScene();
 
@@ -101,6 +103,9 @@ private:
   CSCI441::Camera *_cam;
   CSCI441::ArcballCam *_arcBallCam;
   CSCI441::FreeCam *_firstPersonCam;
+  CSCI441::FreeCam *_minimapCam; // Top-down camera for minimap
+  float _minimapHeight; // Height of the minimap camera
+  bool _minimapVisible = true; // Whether the minimap is visible (toggle with H)
   /// \desc pair of values to store the speed the camera can move/rotate.
   /// \brief x = forward/backward delta, y = rotational delta
   glm::vec2 _cameraSpeed;
@@ -146,16 +151,15 @@ private:
   /// \desc the number of points that make up our ground object
   GLsizei _numGroundPoints;
 
-  struct BushVertexData {
+  struct WallVertexData {
     glm::vec3 position;
     glm::vec2 texCoords;
   };
-  struct BushData {
+  struct WallData {
     glm::vec3 position;
-    glm::vec3 color;
     GLfloat size;
   };
-  std::vector<BushData> _bushes;
+  std::vector<WallData> _walls;
 
   GLuint _postFBO;
   GLuint _postTextureID;
@@ -273,6 +277,21 @@ private:
     GLint mvpMatrix;
     GLint spriteTexture;
   } _spriteShaderUniformLocations;
+
+  // flat shader for minimap
+  CSCI441::ShaderProgram *_flatShaderProgram;
+  struct FlatShaderUniformLocations {
+    GLint mvpMatrix;
+    GLint modelMatrix;
+    GLint normalMatrix;
+    GLint materialColor;
+    GLint lightDirection;
+  } _flatShaderUniformLocations;
+
+  struct FlatShaderAttributeLocations {
+    GLint vPos;
+    GLint vNormal;
+  } _flatShaderAttributeLocations;
 
   CSCI441::ShaderProgram *_postShaderProgram;
   struct PostShaderUniformLocations {

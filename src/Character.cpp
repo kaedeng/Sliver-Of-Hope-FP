@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <CSCI441/objects.hpp>
 
 Character::Character(
     GLuint shaderProgramHandle,
@@ -20,6 +21,8 @@ Character::Character(
     _heading(M_PI/2),
     _headingVector(0.0f, 0.0f, 1.0f),
     _moveSpeed(5.0f),
+    armOffset(0.0f),
+    animDir(1.0f),
     _model(nullptr)
 {
     _shaderLocations.mvpMtx = mvpMtxUniformLocation;
@@ -254,6 +257,38 @@ void Character::_setupMeshBuffers(int meshIndex) {
         glBindVertexArray(0);
         _primitives.push_back(prim);
     }
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec2 texCoord;
+    };
+
+    Vertex vertices[] = {
+        // triangle 1
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(0.05f, 0.95f) },
+        { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(1.0f/3.0-0.05, 0.05f) },
+        // triangle 2
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05, 0.05f) },
+        { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(0.05f, 0.05f) }
+    };
+
+    glGenVertexArrays(1, &_vao);
+    glBindVertexArray(_vao);
+
+    glGenBuffers(1, &_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+    // position (location 0)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+
+    // texCoord (location 1)
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
+
+    glBindVertexArray(0);
 }
 
 // need to handle all parental relationships between joints and also inital locations
@@ -543,10 +578,69 @@ void Character::playAnimation(const std::string& animationName) {
 
 // wrapper for update animation and join transformations
 void Character::update(float deltaTime) {
+    lastDelt+=deltaTime;
     if (_animState.isPlaying && _animState.currentAnimation >= 0) {
         _updateAnimation(deltaTime);
     }
     _updateJointTransforms();
+
+        if (armOffset > 0.00f){
+            armOffset = 0.00f;
+            animDir = -1.0f;
+        } else if (armOffset < -0.1f) {
+            armOffset = -0.1f;
+            animDir = 1.0f;
+        }
+        armOffset += animDir*(deltaTime/10.0f);
+
+    // vertices list decisions
+    struct Vertex {
+        glm::vec3 position;
+        glm::vec2 texCoord;
+    };
+
+    Vertex vertices1[] = {
+        // triangle 1
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(0.05f, 0.95f) },
+        { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(1.0f/3.0-0.05f, 0.05f) },
+        // triangle 2
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.05f) },
+        { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(0.05f, 0.05f) }
+    };
+    Vertex vertices2[] = {
+        // triangle 1
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(2.0f/3.0-0.05, 0.05f) },
+        // triangle 2
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.05f) },
+        { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(1.0/3.0f-0.05f, 0.05f) }
+    };
+    Vertex vertices3[] = {
+        // triangle 1
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f, 0.95f) },
+        { glm::vec3( 0.25f, -0.5f, 0.0f), glm::vec2(3.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(3.0f/3.0-0.05f, 0.05f) },
+        // triangle 2
+        { glm::vec3(-0.25f, -0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.95f) },
+        { glm::vec3( 0.25f,  0.5f, 0.0f), glm::vec2(3.0/3.0f-0.05f, 0.05f) },
+        { glm::vec3(-0.25f,  0.5f, 0.0f), glm::vec2(2.0/3.0f-0.05f, 0.05f) }
+    };
+
+    glBindVertexArray(_vao);
+    glBindBuffer(GL_ARRAY_BUFFER,_vbo);
+    int frame = int(deltaTime / 0.3f) % 3;
+    if (frame==0) {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices1), vertices1);
+    } else if (frame==2) {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices2), vertices2);
+    } else if (frame==3) {
+        glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices3), vertices3);
+    }
+    glBindVertexArray(0);
 }
 
 // pathfinding update for enemy AI
@@ -722,6 +816,42 @@ glm::quat Character::_interpolateQuat(const std::vector<float>& times,
     }
     
     return values.back();
+}
+
+void Character::drawArm(GLuint shaderProgramHandle,
+    GLint mvpMatrixLoc,
+    GLint textureLoc,
+    const glm::mat4& viewMtx,
+    const glm::mat4& projMtx,
+    GLuint textureHandle) {
+    glm::mat4 model = glm::translate(glm::mat4(1.0f),
+                                     glm::vec3(0.75f, -0.25f+armOffset, -1.0f));
+    model = glm::scale(model, glm::vec3(1.5f, 1.5f, 3.0f));
+
+    glm::mat4 view = glm::mat4(1.0f); // NO camera transform
+
+    _computeAndSendMatrixUniforms(model, view, projMtx);
+    //CSCI441::drawSolidCube(0.2f);
+
+    // uniforms
+    glUseProgram(shaderProgramHandle);
+    glUniformMatrix4fv(mvpMatrixLoc, 1, GL_FALSE, glm::value_ptr(model));
+
+    // bind texture
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureHandle);
+    glUniform1i(textureLoc, 0);
+
+    // enable blending for transparent pixels
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // draw
+    glBindVertexArray(_vao);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glBindVertexArray(0);
+
+    glDisable(GL_BLEND); // turn this off after drawing
 }
 
 // draw function, handles literally every primitive that was loaded from the model

@@ -419,6 +419,7 @@ void FPEngine::mSetupTextures() {
       _loadAndRegisterTexture("./assets/textures/bricks.png");
   _texHandles[TEXTURE_ID::PARTICLE] =
       _loadAndRegisterTexture("assets/textures/blood.png");
+    _texHandles[TEXTURE_ID::PLAYER] = _loadAndRegisterTexture("./assets/textures/weaponspell1.png");
 }
 
 void FPEngine::mSetupBuffers() {
@@ -950,9 +951,15 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   if (!_characterDead && _cam != _firstPersonCam) {
     glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
     _pCharacter->draw(glm::mat4(1.0f), viewMtx, projMtx);
+  } else if (!_characterDead && _cam == _firstPersonCam) {
+      _pCharacter->drawArm(_spriteShaderProgram->getShaderProgramHandle(),
+                        _spriteShaderUniformLocations.mvpMatrix,
+                        _spriteShaderUniformLocations.spriteTexture, viewMtx,
+                        projMtx, _texHandles[TEXTURE_ID::PLAYER]);
   }
 
   // draw enemy Elster
+    glUseProgram(_elsterShaderProgram->getShaderProgramHandle());
   glUniform1i(_elsterShaderUniformLocations.useSkinning, true);
   _pEnemyElster->draw(glm::mat4(1.0f), viewMtx, projMtx);
 

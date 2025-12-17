@@ -94,10 +94,9 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _groundTessShaderProgram->getAttributeLocation("vTexCoord");
       break;
 
-      // Camera switching delete
-      // TODO: have a disable minimap once created
-      // case GLFW_KEY_1:
-      // case GLFW_KEY_2:
+    case GLFW_KEY_H:
+      _minimapVisible = !_minimapVisible;
+      break;
 
     default:
       break; // suppress CLion warning
@@ -1392,41 +1391,43 @@ void FPEngine::run() {
     _renderScene(_cam->getViewMatrix(), mainProjectionMatrix,
                  _cam->getPosition());
 
-    // Clear depth buffer for minimap viewport
-    glClear(GL_DEPTH_BUFFER_BIT);
+    if (_minimapVisible) {
+      // Clear depth buffer for minimap viewport
+      glClear(GL_DEPTH_BUFFER_BIT);
 
-    // Minimap viewport dimensions at the top right corner
-    GLint minimapWidth = framebufferWidth / 5;
-    GLint minimapHeight = framebufferHeight / 5;
-    GLint minimapX = framebufferWidth - minimapWidth - 10;
-    GLint minimapY = framebufferHeight - minimapHeight - 10;
+      // Minimap viewport dimensions at the top right corner
+      GLint minimapWidth = framebufferWidth / 5;
+      GLint minimapHeight = framebufferHeight / 5;
+      GLint minimapX = framebufferWidth - minimapWidth - 10;
+      GLint minimapY = framebufferHeight - minimapHeight - 10;
 
-    // Use orthographic projection for minimap (typical for top-down views)
-    float orthoSize = 30.0f; // View area size
-    float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
-    glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);
+      // Use orthographic projection for minimap (typical for top-down views)
+      float orthoSize = 30.0f; // View area size
+      float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
+      glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);
 
-    // render minimap view
-    glViewport(minimapX, minimapY, minimapWidth, minimapHeight);
+      // render minimap view
+      glViewport(minimapX, minimapY, minimapWidth, minimapHeight);
 
-    // scissor test to only clear this viewport
-    glEnable(GL_SCISSOR_TEST);
-    glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
+      // scissor test to only clear this viewport
+      glEnable(GL_SCISSOR_TEST);
+      glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
 
-    // clear color (match floor color)
-    glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+      // clear color (match floor color)
+      glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
 
-    // Create a simple top-down view matrix - camera high above terrain
-    glm::vec3 charPos = _pCharacter->getPosition();
-    glm::vec3 eye = glm::vec3(charPos.x, 200.0f, charPos.z);  // High above terrain
-    glm::vec3 center = glm::vec3(charPos.x, 0.0f, charPos.z);
-    glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f); // -Z is up in this view
-    glm::mat4 minimapViewMatrix = glm::lookAt(eye, center, up);
+      // Create a simple top-down view matrix - camera high above terrain
+      glm::vec3 charPos = _pCharacter->getPosition();
+      glm::vec3 eye = glm::vec3(charPos.x, 200.0f, charPos.z);  // High above terrain
+      glm::vec3 center = glm::vec3(charPos.x, 0.0f, charPos.z);
+      glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f); // -Z is up in this view
+      glm::mat4 minimapViewMatrix = glm::lookAt(eye, center, up);
 
-    _renderMinimap(minimapViewMatrix, minimapProjectionMatrix);
+      _renderMinimap(minimapViewMatrix, minimapProjectionMatrix);
 
-    // Disable scissor test
-    glDisable(GL_SCISSOR_TEST);
+      // Disable scissor test
+      glDisable(GL_SCISSOR_TEST);
+    }
 
     _updateScene();
 

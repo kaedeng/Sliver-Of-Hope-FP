@@ -105,6 +105,7 @@ private:
   CSCI441::FreeCam *_firstPersonCam;
   CSCI441::FreeCam *_minimapCam; // Top-down camera for minimap
   float _minimapHeight; // Height of the minimap camera
+  bool _minimapVisible = true; // Whether the minimap is visible (toggle with H)
   /// \desc pair of values to store the speed the camera can move/rotate.
   /// \brief x = forward/backward delta, y = rotational delta
   glm::vec2 _cameraSpeed;

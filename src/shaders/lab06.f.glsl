@@ -74,7 +74,7 @@ void main() {
 
         // attenuation
         float eyeDistance = length(eyeLightPositions[i] - fragPosition);
-        float eyeAttenuation = 1.0 / (1.0 + 0.5 * eyeDistance + 0.3 * (eyeDistance * eyeDistance));
+        float eyeAttenuation = 1.0 / (0.5 + 0.0 * eyeDistance + 0.05 * (eyeDistance * eyeDistance));
 
         eyeLightTotal += (eyeDiffuse + eyeSpecular) * eyeAttenuation;
     }

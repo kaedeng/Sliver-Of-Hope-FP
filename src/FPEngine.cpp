@@ -25,6 +25,9 @@ FPEngine::FPEngine()
     _textureShaderProgram(nullptr),
     _textureShaderUniformLocations({-1, -1}),
     _textureShaderAttributeLocations({-1, -1, -1}), _pCharacter(nullptr), _pTympanius(nullptr),
+    _postShaderProgram(nullptr),
+    _postShaderUniformLocations({-1, -1}),
+    _postShaderAttributeLocations({0, 1}),
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
@@ -409,6 +412,28 @@ void FPEngine::mSetupShaders() {
 
     CSCI441::setVertexAttributeLocations(_textureShaderAttributeLocations.vPos,_textureShaderAttributeLocations.vNormal,
                                          _textureShaderAttributeLocations.texCoord);
+
+    _postShaderProgram = new CSCI441::ShaderProgram("shaders/post.v.glsl", "shaders/post.f.glsl");
+    _postShaderUniformLocations.mvpMatrix = _postShaderProgram->getUniformLocation("mvpMatrix");
+    _postShaderUniformLocations.sceneTexture = _postShaderProgram->getUniformLocation("sceneTexture");
+    _postShaderUniformLocations.rOffset = _postShaderProgram->getUniformLocation("rOffset");
+    _postShaderUniformLocations.gOffset = _postShaderProgram->getUniformLocation("gOffset");
+    _postShaderUniformLocations.bOffset = _postShaderProgram->getUniformLocation("bOffset");
+    _postShaderUniformLocations.rNoise = _postShaderProgram->getUniformLocation("rNoise");
+    _postShaderUniformLocations.gNoise = _postShaderProgram->getUniformLocation("gNoise");
+    _postShaderUniformLocations.bNoise = _postShaderProgram->getUniformLocation("bNoise");
+
+    // Debug: print uniform locations to verify they're valid
+    fprintf(stdout, "[DEBUG] Post shader uniforms - sceneTexture: %d, rOffset: %d, gOffset: %d, bOffset: %d\n",
+            _postShaderUniformLocations.sceneTexture,
+            _postShaderUniformLocations.rOffset,
+            _postShaderUniformLocations.gOffset,
+            _postShaderUniformLocations.bOffset);
+
+    _postShaderAttributeLocations.vPos = _postShaderProgram->getAttributeLocation("vPos");
+    _postShaderAttributeLocations.texCoord = _postShaderProgram->getAttributeLocation("texCoord");
+    CSCI441::setVertexAttributeLocations(_postShaderAttributeLocations.vPos,_postShaderAttributeLocations.texCoord);
+
 }
 
 void FPEngine::mSetupTextures() {
@@ -426,6 +451,70 @@ void FPEngine::mSetupBuffers() {
   CSCI441::setVertexAttributeLocations(
       _textureShaderAttributeLocations.vPos,
       _textureShaderAttributeLocations.vNormal, _textureShaderAttributeLocations.texCoord);
+
+    // this is for post-processing chromatic aberration stuff
+    glGenFramebuffers(1, &_postFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glGenTextures(1, &_postTextureID);
+    glBindTexture(GL_TEXTURE_2D, _postTextureID);
+
+    // IMPORTANT: Use glfwGetFramebufferSize for actual pixel dimensions (Retina displays)
+    int width, height;
+    glfwGetFramebufferSize(mpWindow, &width, &height);
+
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGB,
+        width,
+        height,
+        0,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        nullptr
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glFramebufferTexture2D(
+        GL_FRAMEBUFFER,
+        GL_COLOR_ATTACHMENT0,
+        GL_TEXTURE_2D,
+        _postTextureID,
+        0);
+
+    GLuint depthRBO;
+    glGenRenderbuffers(1, &depthRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRBO);
+    glRenderbufferStorage(
+        GL_RENDERBUFFER,
+        GL_DEPTH24_STENCIL8,
+        width,
+        height
+    );
+
+    glFramebufferRenderbuffer(
+        GL_FRAMEBUFFER,
+        GL_DEPTH_STENCIL_ATTACHMENT,
+        GL_RENDERBUFFER,
+        depthRBO
+    );
+
+    // Check framebuffer completeness
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        fprintf(stderr, "[ERROR]: Post-processing framebuffer is not complete!\n");
+    } else {
+        fprintf(stdout, "[INFO]: Post-processing framebuffer created successfully\n");
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind FBO after setup
+
+    // Generate VAO/VBO/IBO for post-processing quad
+    glGenVertexArrays(1, &_quadVAO);
+    glGenBuffers(1, &_quadVBO);
+    glGenBuffers(1, &_quadIBO);
+    _createQuad(); // creating screen sized quad
 
   _createGroundBuffers();
   _generateEnvironment();
@@ -681,7 +770,13 @@ void FPEngine::mCleanupBuffers() {
   fprintf(stdout, "[INFO]: ...deleting VAOs....\n");
   CSCI441::deleteObjectVAOs();
   glDeleteVertexArrays(1, &_groundVAO);
+  glDeleteVertexArrays(1, &_quadVAO);
+  glDeleteBuffers(1, &_quadVBO);
+  glDeleteBuffers(1, &_quadIBO);
+  glDeleteFramebuffers(1, &_postFBO);
+  glDeleteTextures(1, &_postTextureID);
   _groundVAO = 0;
+  _quadVAO = 0;
 
   fprintf(stdout, "[INFO]: ...deleting VBOs....\n");
   CSCI441::deleteObjectVBOs();
@@ -763,8 +858,51 @@ void FPEngine::_generateEnvironment() {
     }
 }
 
+void FPEngine::_createQuad() {
+    struct VertexTextured {
+        glm::vec3 position;
+        glm::vec2 texCoord;
+    };
+
+    // create our custom quad
+    constexpr VertexTextured quadVertices[4] = {
+        { { -1.0f, -1.0f, 0.0f},  { 0.0f, 0.0f } }, // 0 - BL
+        { {  1.0f, -1.0f, 0.0f},  { 1.0f, 0.0f } }, // 1 - BR
+        { { -1.0f,  1.0f, 0.0f},  { 0.0f, 1.0f } }, // 2 - TL
+        { {  1.0f,  1.0f, 0.0f},  { 1.0f, 1.0f } }  // 3 - TR
+    };
+
+    constexpr GLushort quadIndices[4] = { 0, 1, 2, 3 };
+    _numQuadVAOPoints = 4;
+
+    glBindVertexArray( _quadVAO );
+
+    glBindBuffer( GL_ARRAY_BUFFER, _quadVBO );
+    glBufferData( GL_ARRAY_BUFFER, sizeof( quadVertices ), quadVertices, GL_STATIC_DRAW );
+
+    glEnableVertexAttribArray( 0 );
+    glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)nullptr );
+
+    glEnableVertexAttribArray( 1 );
+    glVertexAttribPointer( 1, 2, GL_FLOAT, GL_FALSE, sizeof(VertexTextured), (void*)(offsetof(VertexTextured,texCoord)) );
+
+    glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, _quadIBO );
+    glBufferData( GL_ELEMENT_ARRAY_BUFFER, sizeof( quadIndices ), quadIndices, GL_STATIC_DRAW );
+
+    fprintf( stdout, "[INFO]: quad read in with VAO/VBO/IBO %d/%d/%d & %d points\n", _quadVAO, _quadVBO, _quadIBO, _numQuadVAOPoints );
+}
+
 void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                             const glm::vec3 &cameraPos) const {
+    int w, h;
+    glfwGetFramebufferSize(mpWindow, &w, &h);  // Use framebuffer size, not window size
+
+    // Render scene to FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, _postFBO);
+    glViewport(0, 0, w, h);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
   _pSkybox->draw(viewMtx, projMtx);
   
 
@@ -918,6 +1056,37 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
                         projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
 
+    // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
+    // Chromatic aberration offsets (0.01 - 0.03 for subtle, higher for dramatic)
+
+    // Bind default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, w, h);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    _postShaderProgram->useProgram();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, _postTextureID);
+    glUniform1i(_postShaderUniformLocations.sceneTexture, 0);
+
+    // Red shifts one direction, blue shifts the other, green stays centered
+    // Use raw OpenGL calls since setProgramUniform may not handle glm::vec2
+    glUniform2f(_postShaderUniformLocations.rOffset, aberrationStrength, 0.0f);
+    glUniform2f(_postShaderUniformLocations.gOffset, 0.0f, 0.0f);
+    glUniform2f(_postShaderUniformLocations.bOffset, -aberrationStrength, 0.0f);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.rNoise, rNoise);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.gNoise, gNoise);
+    _postShaderProgram->setProgramUniform(_postShaderUniformLocations.bNoise, bNoise);
+
+    // Draw fullscreen quad
+    glBindVertexArray(_quadVAO);
+    glDrawElements(GL_TRIANGLE_STRIP, 4, GL_UNSIGNED_SHORT, (void*)0);
+
+    // Re-enable depth testing for next frame
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
 }
 
 void FPEngine::_updateScene() {
@@ -1123,38 +1292,48 @@ void FPEngine::_updateScene() {
       _firstPersonCam->setPhi(_cameraPitch);
 
       _firstPersonCam->recomputeOrientation();
-      spotLightPosition = _firstPersonCam->getPosition();
-      spotLightDirection =
-            glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
     }
     else{
       glm::vec3 cameraPos = _firstPersonCam->getPosition();
-      if (cameraPos.y > _pEnemyElster->getPosition().y+1.2f){ // Death Falling animation
-        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y-2.5f*deltaTime, cameraPos.z));
+      if (cameraPos.y < 1000.0f){ // Death Falling animation
+        _firstPersonCam->setPosition(glm::vec3(cameraPos.x, cameraPos.y+10.0f*deltaTime, cameraPos.z));
       }
+
+      glm::vec3 killerPos;
       switch (_enemyThatKilled){
         case 0: // Tympanius
-          _firstPersonCam->setLookAtPoint(_pTympanius->getPosition());
+          killerPos = _pTympanius->getPosition();
           break;
         case 1: {// Wilfred
           glm::vec3 wilfred_Pos = _pWilfred->getPosition();
-          _firstPersonCam->setLookAtPoint(glm::vec3(wilfred_Pos.x, wilfred_Pos.y+2.5f, wilfred_Pos.z));
+          killerPos = glm::vec3(wilfred_Pos.x, wilfred_Pos.y+2.5f, wilfred_Pos.z);
           break;
         }
         case 2: { // Enemy Elster
           glm::vec3 enemyElster_Pos = _pEnemyElster->getPosition();
-          _firstPersonCam->setLookAtPoint(glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+1.5f, enemyElster_Pos.z));
+          killerPos = glm::vec3(enemyElster_Pos.x, enemyElster_Pos.y+1.5f, enemyElster_Pos.z);
           break;
         }
         case 3: // Farina
-          _firstPersonCam->setLookAtPoint(_pFarina->getPosition());
+          killerPos = _pFarina->getPosition();
           break;
       }
+    
+      _deathEasingParam = glm::min(_deathEasingParam + deltaTime * 0.1f, 1.0f);
+
+      glm::vec3 current = _firstPersonCam->getLookAtPoint();
+      glm::vec3 target = killerPos;
+
+      glm::vec3 mixed = glm::mix(current, target, pow(_deathEasingParam, 3));
+      _firstPersonCam->setLookAtPoint(mixed);
+        
       _firstPersonCam->computeViewMatrix();
-      spotLightPosition = _firstPersonCam->getPosition();
-      spotLightDirection =
-            glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
     }
+
+    spotLightPosition = _firstPersonCam->getPosition();
+    spotLightDirection =
+          glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
+
   _elsterShaderProgram->useProgram();
   _elsterShaderProgram->setProgramUniform(
       _elsterShaderUniformLocations.spotLightPosition, spotLightPosition);
@@ -1168,6 +1347,11 @@ void FPEngine::_updateScene() {
   _groundTessShaderProgram->setProgramUniform(
       _groundTessShaderUniformLocations.spotLightDirection, spotLightDirection);
   }
+    float enemyDistance = _getEnemyDistance();
+    aberrationStrength = std::max(0.0f,0.05f-enemyDistance/400);
+    rNoise = aberrationStrength;
+    gNoise = 0 + (float)rand()/((float)RAND_MAX/(aberrationStrength*5));
+    bNoise = 0 + (float)rand()/((float)RAND_MAX/(aberrationStrength*5));
 }
 
 void FPEngine::run() {
@@ -1376,6 +1560,26 @@ glm::vec3 FPEngine::_checkAndResolveCollisions(const glm::vec3 &position,
   return correctedPos;
 }
 
+float FPEngine::_getEnemyDistance() {
+    std::vector<glm::vec3> enemies;
+    enemies.push_back(_pFarina->getPosition());
+    enemies.push_back(_pWilfred->getPosition());
+    enemies.push_back(_pEnemyElster->getPosition());
+    enemies.push_back(_pTympanius->getPosition());
+    glm::vec3 enemy = enemies.at(0);
+    glm::vec3 cam = _cam->getPosition();
+    double smallestDist = sqrt(pow(enemy.x-cam.x, 2) +pow(enemy.y-cam.y, 2) +pow(enemy.z-cam.z, 2));
+    for (int i=0; i<enemies.size(); i++) {
+        enemy = enemies.at(i);
+        double currDist = sqrt(pow(enemy.x-cam.x, 2) +pow(enemy.y-cam.y, 2) +pow(enemy.z-cam.z, 2));
+        if (currDist<smallestDist) {
+            smallestDist = currDist;
+        }
+    }
+    return smallestDist;
+}
+
+
 float FPEngine::_getObjectHeightAt(float x, float z) const {
   const float CHARACTER_RADIUS =
       0.5f; // Match this with character collision radius
@@ -1473,7 +1677,9 @@ void FPEngine::_checkEnemyCollisions() {
 
 void FPEngine::doDeath(const char* killerName, glm::vec3 playerPos){
     _characterDead = true;
-    _particleSystem->spawnBurst(playerPos, 60);
+    _particleSystem->spawnBurst(playerPos, 120);
+    glm::vec3 currentLookAt = _firstPersonCam->getLookAtPoint();
+    _firstPersonCam->setLookAtPoint(glm::vec3(currentLookAt.x, 50.0f, currentLookAt.z));
     fprintf(stdout, "[INFO]: Player caught by %s! Game Over!\n", killerName);
     fprintf(stdout, "[INFO]: You lasted: %dm %ds\n", static_cast<int>(glfwGetTime())/60, static_cast<int>(glfwGetTime())%60);
 }

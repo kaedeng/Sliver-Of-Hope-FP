@@ -88,7 +88,7 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
                               _textureShaderUniformLocations.modelMatrix);
 
       _pTympanius->updateShaderReferences(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
-      
+
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -521,7 +521,6 @@ void FPEngine::mSetupBuffers() {
     _createQuad(); // creating screen sized quad
 
   _createGroundBuffers();
-  _generateEnvironment();
 }
 
 void FPEngine::_createGroundBuffers() {
@@ -675,6 +674,8 @@ void FPEngine::mSetupScene() {
   _enemies.push_back(_pWilfred);
   _enemies.push_back(_pEnemyElster);
   _enemies.push_back(_pFarina);
+
+  _generateEnvironment();
 
   // Set lighting parameters
   _setLightingParameters();
@@ -834,6 +835,10 @@ void FPEngine::_generateEnvironment() {
         // Use a while loop with std::getline to read the file line by line
         float width = (RIGHT_END_POINT - LEFT_END_POINT)/28;
         float height = (TOP_END_POINT - BOTTOM_END_POINT)/28;
+
+        std::vector<float>* openSpaces = new std::vector<float>();
+        int numSpaces = 0;
+
         while (std::getline(inputFile, line)) {
             col=0;
             std::istringstream lineStream(line);
@@ -849,14 +854,37 @@ void FPEngine::_generateEnvironment() {
                     wall.position = glm::vec3(wallX, terrainY + wall.size, wallZ);
                     _walls.push_back(wall);
                 }
+                else if (square == "o") {
+                    float spaceX = LEFT_END_POINT+(col*width);
+                    float spaceZ = BOTTOM_END_POINT+(row*height);
+                    openSpaces->push_back(spaceX);
+                    openSpaces->push_back(spaceZ);
+                    numSpaces++;
+                  }
                 col++;
             }
             row++;
         }
         inputFile.close(); // Close the file stream
+        
+        for (int i = 0; i < 4; i++){
+          int spaceIndex = int(getRand()*numSpaces);
+          float enemyX = openSpaces->at(spaceIndex*2);
+          float enemyZ = openSpaces->at(spaceIndex*2+1);
+          float terrainY = _getTerrainHeight(enemyX, enemyZ);
+          _enemies[i]->setPosition(glm::vec3(enemyX, terrainY, enemyZ));
+        }
+      
+        int spaceIndex = int(getRand()*numSpaces);
+        float characterX = openSpaces->at(spaceIndex*2);
+        float characterZ = openSpaces->at(spaceIndex*2+1);
+        float terrainY = _getTerrainHeight(characterX, characterZ);
+        _pCharacter->setPosition(glm::vec3(characterX, terrainY, characterZ));
+
     } else {
         std::cerr << "Unable to open file" << std::endl;
     }
+    
 }
 
 void FPEngine::_createQuad() {
@@ -1015,7 +1043,7 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
 
   for (const auto &wall : _walls) {
     glm::mat4 wallModelMtx = glm::translate(glm::mat4(1.0f), wall.position);
-    wallModelMtx = glm::scale(wallModelMtx, glm::vec3(wall.size, wall.size*4.0f, wall.size));
+    wallModelMtx = glm::scale(wallModelMtx, glm::vec3(wall.size, wall.size*6.0f, wall.size));
     glm::mat4 TmvpMtx = projMtx * viewMtx * wallModelMtx;
     const glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(wallModelMtx)));
 
@@ -1279,7 +1307,7 @@ void FPEngine::_updateScene() {
     glm::vec3 spotLightPosition;
     glm::vec3 spotLightDirection;
     if(!_characterDead){  
-      const float EYE_HEIGHT = 4.0f;
+      const float EYE_HEIGHT = 4.5f;
       glm::vec3 characterPos = _pCharacter->getPosition();
       glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
 
@@ -1445,6 +1473,13 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glm::vec3 charPos = _pCharacter->getPosition();
+  float yaw = _firstPersonCam->getTheta();
+
+  // Translate everything so character is at origin, rotate, then translate back
+  glm::mat4 minimapRoot = glm::mat4(1.0f);
+  minimapRoot = glm::translate(minimapRoot, charPos);        // move to character
+  minimapRoot = glm::rotate(minimapRoot, yaw, glm::vec3(0,1,0)); // rotate
+  minimapRoot = glm::translate(minimapRoot, -charPos);       // move back
 
   // Use flat shader for minimap
   _flatShaderProgram->useProgram();
@@ -1456,6 +1491,7 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx
   // Draw a large flat plane for the ground
   glm::mat4 groundModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f));
   groundModelMtx = glm::scale(groundModelMtx, glm::vec3(200.0f, 1.0f, 200.0f));
+  groundModelMtx = minimapRoot * groundModelMtx;
   glm::mat4 mvpMtx = projMtx * viewMtx * groundModelMtx;
   glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(groundModelMtx)));
 
@@ -1485,6 +1521,7 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx
       glm::vec3 enemyPos = enemy->getPosition();
       glm::mat4 enemyModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(enemyPos.x, 5.0f, enemyPos.z));
       enemyModelMtx = glm::scale(enemyModelMtx, glm::vec3(2.0f, 2.0f, 2.0f));
+      enemyModelMtx = minimapRoot * enemyModelMtx;
       mvpMtx = projMtx * viewMtx * enemyModelMtx;
       normalMtx = glm::transpose(glm::inverse(glm::mat3(enemyModelMtx)));
 
@@ -1493,7 +1530,7 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx
       _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
       _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));  // Red for enemy
 
-      CSCI441::drawSolidCube(1.0f);
+      CSCI441::drawSolidSphere(0.75f, 3.0f, 15.0f);
     }
   }
 }

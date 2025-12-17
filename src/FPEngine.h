@@ -135,7 +135,7 @@ private:
 
   Skybox *_pSkybox;
 
-  const glm::vec3 spotLightColor = {0.95f, 1.0f, 0.9f};
+  const glm::vec3 spotLightColor = {0.898, 0.929, 0.475};
   const glm::vec3 pointLightColor = {1.0f, 0.0f, 0.0f};
   const glm::vec3 lightDirection = {-1.0f, 0.1f, -0.2f};
   const glm::vec3 lightColor = {0, 0, 0};

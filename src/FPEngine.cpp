@@ -31,7 +31,8 @@ FPEngine::FPEngine()
       _pWilfred(nullptr), _pEnemyElster(nullptr), _pFarina(nullptr),
       _characterMoveSpeed(10.0f), _characterTurnSpeed(2.0f),
       _characterVerticalVelocity(0.0f), _characterOnGround(true),
-      _characterDead(false), _particleSystem(nullptr){
+      _characterDead(false), _particleSystem(nullptr),
+      _minimapCam(nullptr), _minimapHeight(25.0f), _flatShaderProgram(nullptr){
 
   for (auto &_key : _keys)
     _key = GL_FALSE;
@@ -40,6 +41,7 @@ FPEngine::FPEngine()
 FPEngine::~FPEngine() {
   delete _arcBallCam;
   delete _firstPersonCam;
+  delete _minimapCam;
   delete _pCharacter;
   delete _pTympanius;
   delete _pWilfred;
@@ -50,6 +52,7 @@ FPEngine::~FPEngine() {
     delete _textureShaderProgram;
   delete _pSkybox;
   delete _spriteShaderProgram;
+  delete _flatShaderProgram;
   delete _particleSystem;
 }
 
@@ -348,6 +351,28 @@ void FPEngine::mSetupShaders() {
   _spriteShaderUniformLocations.spriteTexture =
       _spriteShaderProgram->getUniformLocation("spriteTexture");
 
+  // load flat shader for minimap
+  _flatShaderProgram = new CSCI441::ShaderProgram("shaders/flat.v.glsl",
+                                                  "shaders/flat.f.glsl");
+
+  // get uniform locations for flat shader
+  _flatShaderUniformLocations.mvpMatrix =
+      _flatShaderProgram->getUniformLocation("mvpMatrix");
+  _flatShaderUniformLocations.modelMatrix =
+      _flatShaderProgram->getUniformLocation("modelMatrix");
+  _flatShaderUniformLocations.normalMatrix =
+      _flatShaderProgram->getUniformLocation("normalMatrix");
+  _flatShaderUniformLocations.materialColor =
+      _flatShaderProgram->getUniformLocation("materialColor");
+  _flatShaderUniformLocations.lightDirection =
+      _flatShaderProgram->getUniformLocation("lightDirection");
+
+  // get attribute locations for flat shader
+  _flatShaderAttributeLocations.vPos =
+      _flatShaderProgram->getAttributeLocation("vPos");
+  _flatShaderAttributeLocations.vNormal =
+      _flatShaderProgram->getAttributeLocation("vNormal");
+
     // texture shader
     _textureShaderProgram = new CSCI441::ShaderProgram("shaders/lab06.v.glsl", "shaders/lab06.f.glsl" );
     // query uniform locations
@@ -623,9 +648,9 @@ void FPEngine::mSetupScene() {
     fprintf(stderr, "Failed to load enemy Elster model\n");
   }
 
-  // starting pos for enemy elster
-  float elsterStartX = -10.0f;
-  float elsterStartZ = -10.0f;
+  // starting pos for enemy elster (moved away from walls)
+  float elsterStartX = 0.0f;
+  float elsterStartZ = 0.0f;
   float elsterStartY = _getTerrainHeight(elsterStartX, elsterStartZ) + 1.0f;
   _pEnemyElster->setPosition(
       glm::vec3(elsterStartX, elsterStartY, elsterStartZ));
@@ -735,6 +760,8 @@ void FPEngine::mCleanupShaders() {
   _groundTessShaderProgram = nullptr;
   delete _spriteShaderProgram;
   _spriteShaderProgram = nullptr;
+  delete _flatShaderProgram;
+  _flatShaderProgram = nullptr;
     delete _textureShaderProgram;
     _textureShaderProgram = nullptr;
 }
@@ -1367,11 +1394,105 @@ void FPEngine::run() {
     _renderScene(_cam->getViewMatrix(), mainProjectionMatrix,
                  _cam->getPosition());
 
+    // Clear depth buffer for minimap viewport
+    glClear(GL_DEPTH_BUFFER_BIT);
+
+    // Minimap viewport dimensions at the top right corner
+    GLint minimapWidth = framebufferWidth / 5;
+    GLint minimapHeight = framebufferHeight / 5;
+    GLint minimapX = framebufferWidth - minimapWidth - 10;
+    GLint minimapY = framebufferHeight - minimapHeight - 10;
+
+    // Use orthographic projection for minimap (typical for top-down views)
+    float orthoSize = 30.0f; // View area size
+    float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
+    glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);
+
+    // render minimap view
+    glViewport(minimapX, minimapY, minimapWidth, minimapHeight);
+
+    // scissor test to only clear this viewport
+    glEnable(GL_SCISSOR_TEST);
+    glScissor(minimapX, minimapY, minimapWidth, minimapHeight);
+
+    // clear color (match floor color)
+    glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+
+    // Create a simple top-down view matrix - camera high above terrain
+    glm::vec3 charPos = _pCharacter->getPosition();
+    glm::vec3 eye = glm::vec3(charPos.x, 200.0f, charPos.z);  // High above terrain
+    glm::vec3 center = glm::vec3(charPos.x, 0.0f, charPos.z);
+    glm::vec3 up = glm::vec3(0.0f, 0.0f, -1.0f); // -Z is up in this view
+    glm::mat4 minimapViewMatrix = glm::lookAt(eye, center, up);
+
+    _renderMinimap(minimapViewMatrix, minimapProjectionMatrix);
+
+    // Disable scissor test
+    glDisable(GL_SCISSOR_TEST);
+
     _updateScene();
 
     glfwSwapBuffers(
         mpWindow); // flush the OpenGL commands and make sure they get rendered!
     glfwPollEvents(); // check for any events and signal to redraw screen
+  }
+}
+
+void FPEngine::_renderMinimap(const glm::mat4 &viewMtx, const glm::mat4 &projMtx) const {
+  // Clear the minimap viewport
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glm::vec3 charPos = _pCharacter->getPosition();
+
+  // Use flat shader for minimap
+  _flatShaderProgram->useProgram();
+  CSCI441::setVertexAttributeLocations(_flatShaderAttributeLocations.vPos, _flatShaderAttributeLocations.vNormal);
+
+  // Set light direction once (pointing down for top-down view)
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.lightDirection, glm::vec3(0.0f, -1.0f, 0.0f));
+
+  // Draw a large flat plane for the ground
+  glm::mat4 groundModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f));
+  groundModelMtx = glm::scale(groundModelMtx, glm::vec3(200.0f, 1.0f, 200.0f));
+  glm::mat4 mvpMtx = projMtx * viewMtx * groundModelMtx;
+  glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(groundModelMtx)));
+
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.mvpMatrix, mvpMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.modelMatrix, groundModelMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(0.15f, 0.15f, 0.15f));  // Dark floor
+
+  CSCI441::drawSolidCube(1.0f);
+
+  // Draw character marker as a bright colored cube
+  glm::mat4 charModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(charPos.x, 5.0f, charPos.z));
+  charModelMtx = glm::scale(charModelMtx, glm::vec3(2.0f, 2.0f, 2.0f));
+  mvpMtx = projMtx * viewMtx * charModelMtx;
+  normalMtx = glm::transpose(glm::inverse(glm::mat3(charModelMtx)));
+
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.mvpMatrix, mvpMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.modelMatrix, charModelMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
+  _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(0.0f, 0.8f, 1.0f));  // Cyan for player
+
+  CSCI441::drawSolidCube(1.0f);
+
+  // Draw all enemies as red cubes
+  for (const auto& enemy : _enemies) {
+    if (enemy) {
+      glm::vec3 enemyPos = enemy->getPosition();
+      glm::mat4 enemyModelMtx = glm::translate(glm::mat4(1.0f), glm::vec3(enemyPos.x, 5.0f, enemyPos.z));
+      enemyModelMtx = glm::scale(enemyModelMtx, glm::vec3(2.0f, 2.0f, 2.0f));
+      mvpMtx = projMtx * viewMtx * enemyModelMtx;
+      normalMtx = glm::transpose(glm::inverse(glm::mat3(enemyModelMtx)));
+
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.mvpMatrix, mvpMtx);
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.modelMatrix, enemyModelMtx);
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.normalMatrix, normalMtx);
+      _flatShaderProgram->setProgramUniform(_flatShaderUniformLocations.materialColor, glm::vec3(1.0f, 0.0f, 0.0f));  // Red for enemy
+
+      CSCI441::drawSolidCube(1.0f);
+    }
   }
 }
 

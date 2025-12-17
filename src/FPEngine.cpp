@@ -80,11 +80,15 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
           _elsterShaderUniformLocations.materialDiffuse,
           _elsterShaderUniformLocations.materialSpecular,
           _elsterShaderUniformLocations.materialShininess);
+      
       _pWilfred = new Wilfred(_textureShaderProgram->getShaderProgramHandle(),
                               _textureShaderUniformLocations.mvpMatrix,
                               _textureShaderUniformLocations.normalMatrix,
                               _textureShaderUniformLocations.materialColor,
                               _textureShaderUniformLocations.modelMatrix);
+
+      _pTympanius->updateShaderReferences(_tympaniusShaderProgram, &_tympaniusShaderUniformLocations, &_tympaniusShaderAttributeLocations);
+      
       // Reload ground tessellation shader attribute locations
       _groundTessShaderAttributeLocations.vPos =
           _groundTessShaderProgram->getAttributeLocation("vPos");
@@ -1396,12 +1400,12 @@ void FPEngine::run() {
       glClear(GL_DEPTH_BUFFER_BIT);
 
       // Minimap viewport dimensions at the top right corner
-      GLint minimapWidth = framebufferWidth / 5;
+      GLint minimapWidth = framebufferHeight / 5;
       GLint minimapHeight = framebufferHeight / 5;
-      GLint minimapX = framebufferWidth - minimapWidth - 10;
-      GLint minimapY = framebufferHeight - minimapHeight - 10;
+      GLint minimapX = framebufferWidth - minimapWidth - 20;
+      GLint minimapY = framebufferHeight - minimapHeight - 20;
 
-      // Use orthographic projection for minimap (typical for top-down views)
+      // Use orthographic projection for minimap
       float orthoSize = 30.0f; // View area size
       float minimapAspectRatio = static_cast<float>(minimapWidth) / static_cast<float>(minimapHeight);
       glm::mat4 minimapProjectionMatrix = glm::ortho(-orthoSize * minimapAspectRatio, orthoSize * minimapAspectRatio, -orthoSize, orthoSize, 0.1f, 1000.0f);

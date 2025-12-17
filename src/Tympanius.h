@@ -19,6 +19,8 @@ public:
     Tympanius(CSCI441::ShaderProgram *shaderProgram, TympaniusShaderUniformLocations* shaderUniformLocations, TympaniusShaderAttributeLocations* shaderAttributeLocations);
     ~Tympanius();
 
+    void updateShaderReferences(CSCI441::ShaderProgram *shaderProgram, TympaniusShaderUniformLocations* shaderUniformLocations, TympaniusShaderAttributeLocations* shaderAttributeLocations);
+
     // Updates tympanius' state.
     void update(GLfloat deltaTime, const glm::vec3& heroPosition, float turnSpeed);
 

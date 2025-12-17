@@ -51,6 +51,12 @@ Tympanius::Tympanius(
 
 Tympanius::~Tympanius() {}
 
+void Tympanius::updateShaderReferences(CSCI441::ShaderProgram *shaderProgram, TympaniusShaderUniformLocations* shaderUniformLocations, TympaniusShaderAttributeLocations* shaderAttributeLocations){
+  _shaderProgram = shaderProgram;
+  _shaderUniformLocations = shaderUniformLocations;
+  _shaderAttributeLocations = shaderAttributeLocations;
+}
+
 // Renders the tympanius model by applying transformations and drawing each part
 void Tympanius::draw(glm::mat4 modelMtx, glm::mat4 viewMtx, glm::mat4 projMtx) {
   _shaderProgram->useProgram();

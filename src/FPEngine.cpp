@@ -716,10 +716,9 @@ void FPEngine::mSetupScene() {
   _pFarina->setPosition(glm::vec3(-15.0f, 25.0f, -15.0f));
 
   // awesome freakin killer ball
-  float ballX = 75.0f; // 5 units away from player in X
-  float ballZ = -7.0f; // 5 units away from player in Z
-  float ballY =
-      _getTerrainHeight(ballX, ballZ) + 2.0f; // Floating slightly above terrain
+  float ballX = 75.0f;
+  float ballZ = -7.0f;
+  float ballY = _getTerrainHeight(ballX, ballZ) + 2.0f;
 
   _pKillerBall = new KillerBall(_flatShaderProgram->getShaderProgramHandle(),
                                 _flatShaderUniformLocations.mvpMatrix,
@@ -728,13 +727,24 @@ void FPEngine::mSetupScene() {
                                 _flatShaderUniformLocations.materialColor,
                                 glm::vec3(ballX, ballY, ballZ));
 
-  _enemies.push_back(_pKillerBall);
+  // Set up Bezier curve for killer ball movement
+  // Curve has varying curvature to demonstrate arc-length parameterization:
+  // - Sharp turn at start (P0 to P1 pulls hard in Z direction)
+  // - Straighter middle section
+  // - Sharp turn at end (P2 to P3 pulls hard in opposite Z direction)
+  // Without arc-length param, ball would slow at sharp turns and speed up in middle
+  glm::vec3 p0(ballX, ballY, ballZ);                      // Start point
+  glm::vec3 p1(ballX - 5.0f, ballY + 15.0f, ballZ + 30.0f);  // Sharp pull up and forward
+  glm::vec3 p2(ballX - 55.0f, ballY + 15.0f, ballZ - 30.0f); // Sharp pull down and back
+  glm::vec3 p3(ballX - 60.0f, ballY, ballZ);              // End point
+  _pKillerBall->setBezierControlPoints(p0, p1, p2, p3);
+  _pKillerBall->setBezierSpeed(20.0f); // Units per second along the curve
 
+  _enemies.push_back(_pKillerBall);
   _enemies.push_back(_pTympanius);
   _enemies.push_back(_pWilfred);
   _enemies.push_back(_pEnemyElster);
   _enemies.push_back(_pFarina);
-  _enemies.push_back(_pKillerBall);
 
   // Set lighting parameters
   _setLightingParameters();
@@ -1958,9 +1968,8 @@ void FPEngine::_checkPlayerEnemyCollision() {
     return;
   }
 
-  // Check collision with Killer Ball
+  // Check collision with Killer Ball - use full 3D distance since ball flies
   glm::vec3 killerBallPos = _pKillerBall->getPosition();
-  // Using 3D distance since the ball floats/flies
   float killerDist = glm::distance(playerPos, killerBallPos);
   float killerMinDist = playerRadius + _pKillerBall->getRadius();
 

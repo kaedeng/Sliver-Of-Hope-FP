@@ -6,7 +6,6 @@
 #include <CSCI441/OpenGLEngine.hpp>
 #include <CSCI441/ShaderProgram.hpp>
 
-#include "ArcballCam.hpp"
 #include "Character.h"
 #include "Enemy.h"
 #include "Farina.h"
@@ -84,7 +83,7 @@ private:
   GLint _leftMouseButtonState;
 
   /// \desc total number of textures in our scene
-  static constexpr GLuint NUM_TEXTURES = 5;
+  static constexpr GLuint NUM_TEXTURES = 6;
   /// \desc used to index through our texture array to give named access
   enum TEXTURE_ID {
     /// \desc ground texture
@@ -95,13 +94,14 @@ private:
     PARTICLE = 2,
     // Hands texture
     PLAYER = 3,
+    // WINTON
+    WINTON = 4
   };
   /// \desc texture handles for our textures
   GLuint _texHandles[NUM_TEXTURES] = {0};
 
   /// \desc the arcball camera in our world
   CSCI441::Camera *_cam;
-  CSCI441::ArcballCam *_arcBallCam;
   CSCI441::FreeCam *_firstPersonCam;
   CSCI441::FreeCam *_minimapCam; // Top-down camera for minimap
   float _minimapHeight;          // Height of the minimap camera
@@ -137,13 +137,14 @@ private:
 
   Skybox *_pSkybox;
 
-  const glm::vec3 spotLightColor = {0.95f, 1.0f, 0.9f};
+  const glm::vec3 spotLightColor = {0.898, 0.929, 0.475};
   const glm::vec3 pointLightColor = {1.0f, 0.0f, 0.0f};
   const glm::vec3 lightDirection = {-1.0f, 0.1f, -0.2f};
   const glm::vec3 lightColor = {0, 0, 0};
 
   // game objects
   ParticleSystem *_particleSystem;
+  bool _useWintonParticles = false; // Toggle with Z key
 
   /// \desc the size of the world (controls the ground size and locations of
   /// buildings)

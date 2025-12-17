@@ -30,7 +30,7 @@ void main() {
     }
 
     // Apply flat lighting to material color
-    vec3 finalColor = materialColor * flatDiffuse;
+    vec3 finalColor = materialColor * 1.0f;
 
     fragColorOut = vec4(finalColor, 1.0);
 }

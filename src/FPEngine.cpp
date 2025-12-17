@@ -36,7 +36,6 @@ FPEngine::FPEngine()
 }
 
 FPEngine::~FPEngine() {
-  delete _arcBallCam;
   delete _firstPersonCam;
   delete _minimapCam;
   delete _pCharacter;
@@ -100,6 +99,16 @@ void FPEngine::handleKeyEvent(const GLint KEY, const GLint ACTION) {
 
     case GLFW_KEY_H:
       _minimapVisible = !_minimapVisible;
+      break;
+
+    case GLFW_KEY_Z:
+      _useWintonParticles = !_useWintonParticles;
+      if(_useWintonParticles){
+        std::cout << "[INFO]: Secret Activated. Now die." << std::endl;
+      }
+      else{
+        std::cout << "[INFO]: Secret Deactivated. Now live... ig." << std::endl;
+      }
       break;
 
     default:
@@ -500,6 +509,8 @@ void FPEngine::mSetupTextures() {
       _loadAndRegisterTexture("assets/textures/blood.png");
   _texHandles[TEXTURE_ID::PLAYER] =
       _loadAndRegisterTexture("./assets/textures/weaponspell1.png");
+  _texHandles[TEXTURE_ID::WINTON] =
+    _loadAndRegisterTexture("./assets/textures/winton.png");
 }
 
 void FPEngine::mSetupBuffers() {
@@ -554,7 +565,6 @@ void FPEngine::mSetupBuffers() {
   _createQuad(); // creating screen sized quad
 
   _createGroundBuffers();
-  _generateEnvironment();
 }
 
 void FPEngine::_createGroundBuffers() {
@@ -621,12 +631,6 @@ void FPEngine::_createGroundBuffers() {
 }
 
 void FPEngine::mSetupScene() {
-  // Create and position the arcball camera - at character height
-  _arcBallCam = new CSCI441::ArcballCam();
-  _arcBallCam->setPosition(glm::vec3(0.0f, 40.0f, 30.0f));
-  _arcBallCam->setLookAtPoint(glm::vec3(0.0f, 35.0f, 0.0f));
-  _arcBallCam->recomputeOrientation();
-
   _pSkybox = new Skybox();
 
   _pCharacter = new Character(_elsterShaderProgram->getShaderProgramHandle(),
@@ -740,6 +744,8 @@ void FPEngine::mSetupScene() {
   _enemies.push_back(_pWilfred);
   _enemies.push_back(_pEnemyElster);
   _enemies.push_back(_pFarina);
+
+  _generateEnvironment();
 
   // Set lighting parameters
   _setLightingParameters();
@@ -899,6 +905,10 @@ void FPEngine::_generateEnvironment() {
     // Use a while loop with std::getline to read the file line by line
     float width = (RIGHT_END_POINT - LEFT_END_POINT) / 28;
     float height = (TOP_END_POINT - BOTTOM_END_POINT) / 28;
+
+        std::vector<float>* openSpaces = new std::vector<float>();
+        int numSpaces = 0;
+
     while (std::getline(inputFile, line)) {
       col = 0;
       std::istringstream lineStream(line);
@@ -913,15 +923,38 @@ void FPEngine::_generateEnvironment() {
           // wall sits on the terrain
           wall.position = glm::vec3(wallX, terrainY + wall.size, wallZ);
           _walls.push_back(wall);
-        }
+                }
+                else if (square == "o") {
+                    float spaceX = LEFT_END_POINT+(col*width);
+                    float spaceZ = BOTTOM_END_POINT+(row*height);
+                    openSpaces->push_back(spaceX);
+                    openSpaces->push_back(spaceZ);
+                    numSpaces++;
+          }
         col++;
       }
       row++;
     }
     inputFile.close(); // Close the file stream
+        
+        for (int i = 0; i < 4; i++){
+          int spaceIndex = int(getRand()*numSpaces);
+          float enemyX = openSpaces->at(spaceIndex*2);
+          float enemyZ = openSpaces->at(spaceIndex*2+1);
+          float terrainY = _getTerrainHeight(enemyX, enemyZ);
+          _enemies[i]->setPosition(glm::vec3(enemyX, terrainY, enemyZ));
+        }
+      
+        int spaceIndex = int(getRand()*numSpaces);
+        float characterX = openSpaces->at(spaceIndex*2);
+        float characterZ = openSpaces->at(spaceIndex*2+1);
+        float terrainY = _getTerrainHeight(characterX, characterZ);
+        _pCharacter->setPosition(glm::vec3(characterX, terrainY, characterZ));
+
   } else {
     std::cerr << "Unable to open file" << std::endl;
   }
+    
 }
 
 void FPEngine::_createQuad() {
@@ -1139,10 +1172,12 @@ void FPEngine::_renderScene(const glm::mat4 &viewMtx, const glm::mat4 &projMtx,
   }
 
   // particles
+  GLuint particleTexture = _useWintonParticles ? _texHandles[TEXTURE_ID::WINTON] : _texHandles[TEXTURE_ID::PARTICLE];
+  float particleSizeMultiplier = _useWintonParticles ? 2.5f : 1.0f;
   _particleSystem->draw(_spriteShaderProgram->getShaderProgramHandle(),
                         _spriteShaderUniformLocations.mvpMatrix,
                         _spriteShaderUniformLocations.spriteTexture, viewMtx,
-                        projMtx, _texHandles[TEXTURE_ID::PARTICLE]);
+                        projMtx, particleTexture, particleSizeMultiplier);
 
   // FRAME BUFFER STUFF - draw to default framebuffer with post-processing
 
@@ -1369,15 +1404,11 @@ void FPEngine::_updateScene() {
   _checkPlayerEnemyCollision();
 
   // update camera to follow character
-  if (_cam == _arcBallCam) {
-    _arcBallCam->setLookAtPoint(_pCharacter->getPosition() +
-                                glm::vec3(0.0f, 5.0f, 0.0f));
-    _arcBallCam->recomputeOrientation();
-  } else if (_cam == _firstPersonCam) {
+  if (_cam == _firstPersonCam) {
     glm::vec3 spotLightPosition;
     glm::vec3 spotLightDirection;
-    if (!_characterDead) {
-      const float EYE_HEIGHT = 4.0f;
+    if(!_characterDead){  
+      const float EYE_HEIGHT = 4.5f;
       glm::vec3 characterPos = _pCharacter->getPosition();
       glm::vec3 cameraPos = characterPos + glm::vec3(0.0f, EYE_HEIGHT, 0.0f);
 
@@ -1435,6 +1466,7 @@ void FPEngine::_updateScene() {
     }
 
     spotLightPosition = _firstPersonCam->getPosition();
+    spotLightPosition.y += 6.0f;
     spotLightDirection =
         glm::normalize(_firstPersonCam->getLookAtPoint() - spotLightPosition);
 
@@ -1550,6 +1582,13 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx,
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glm::vec3 charPos = _pCharacter->getPosition();
+  float yaw = _firstPersonCam->getTheta();
+
+  // Translate everything so character is at origin, rotate, then translate back
+  glm::mat4 minimapRoot = glm::mat4(1.0f);
+  minimapRoot = glm::translate(minimapRoot, charPos);        // move to character
+  minimapRoot = glm::rotate(minimapRoot, yaw, glm::vec3(0,1,0)); // rotate
+  minimapRoot = glm::translate(minimapRoot, -charPos);       // move back
 
   // using flat shader for minimap
   _flatShaderProgram->useProgram();
@@ -1564,6 +1603,7 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx,
   glm::mat4 groundModelMtx =
       glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f));
   groundModelMtx = glm::scale(groundModelMtx, glm::vec3(200.0f, 1.0f, 200.0f));
+  groundModelMtx = minimapRoot * groundModelMtx;
   glm::mat4 mvpMtx = projMtx * viewMtx * groundModelMtx;
   glm::mat3 normalMtx = glm::transpose(glm::inverse(glm::mat3(groundModelMtx)));
 
@@ -1605,6 +1645,7 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx,
       glm::mat4 enemyModelMtx = glm::translate(
           glm::mat4(1.0f), glm::vec3(enemyPos.x, 5.0f, enemyPos.z));
       enemyModelMtx = glm::scale(enemyModelMtx, glm::vec3(2.0f, 2.0f, 2.0f));
+      enemyModelMtx = minimapRoot * enemyModelMtx;
       mvpMtx = projMtx * viewMtx * enemyModelMtx;
       normalMtx = glm::transpose(glm::inverse(glm::mat3(enemyModelMtx)));
 
@@ -1618,7 +1659,7 @@ void FPEngine::_renderMinimap(const glm::mat4 &viewMtx,
           _flatShaderUniformLocations.materialColor,
           glm::vec3(1.0f, 0.0f, 0.0f)); // Red for enemy
 
-      CSCI441::drawSolidCube(1.0f);
+      CSCI441::drawSolidSphere(0.75f, 3.0f, 15.0f);
     }
   }
 }

@@ -581,14 +581,14 @@ void Character::update(float deltaTime) {
     }
     _updateJointTransforms();
 
-        if (armOffset > 0.00f){
-            armOffset = 0.00f;
+        if (armOffset > 0.15f){
+            armOffset = 0.15f;
             animDir = -1.0f;
-        } else if (armOffset < -0.1f) {
-            armOffset = -0.1f;
+        } else if (armOffset < -0.15f) {
+            armOffset = -0.15f;
             animDir = 1.0f;
         }
-        armOffset += animDir*(deltaTime/10.0f);
+        armOffset += animDir*(deltaTime/1.5f);
 
     // vertices list decisions
     struct Vertex {
@@ -629,7 +629,7 @@ void Character::update(float deltaTime) {
 
     glBindVertexArray(_vao);
     glBindBuffer(GL_ARRAY_BUFFER,_vbo);
-    int frame = int(lastDelt / 0.3f) % 4;
+    int frame = int(lastDelt / 0.6f) % 4;
     if (frame==0) {
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices1), vertices1);
     } else if (frame==1) {
@@ -824,9 +824,9 @@ void Character::drawArm(GLuint shaderProgramHandle,
     const glm::mat4& projMtx,
     GLuint textureHandle) {
     glm::mat4 model = glm::translate(glm::mat4(1.0f),
-                                     glm::vec3(0.75f, -0.25f+armOffset, -1.0f));
+                                     glm::vec3(0.75f, -0.42f+armOffset, -1.0f));
     model = glm::scale(model, glm::vec3(1.5f, 1.5f, 3.0f));
-
+   
     glm::mat4 view = glm::mat4(1.0f); // NO camera transform
 
     _computeAndSendMatrixUniforms(model, view, projMtx);
@@ -843,10 +843,24 @@ void Character::drawArm(GLuint shaderProgramHandle,
     // enable blending for transparent pixels
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
+    
     // draw
     glBindVertexArray(_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    
+    glm::mat4 mirrorModel = glm::translate(glm::mat4(1.0f),
+                                     glm::vec3(-0.75f, -0.42f-armOffset, -1.0f));
+
+    mirrorModel = glm::scale(mirrorModel, glm::vec3(-1.5f, 1.5f, 3.0f));
+
+    _computeAndSendMatrixUniforms(mirrorModel, view, projMtx);
+
+    glUniformMatrix4fv(mvpMatrixLoc, 1, GL_FALSE, glm::value_ptr(mirrorModel));
+
+    glBindVertexArray(_vao);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
     glBindVertexArray(0);
 
     glDisable(GL_BLEND); // turn this off after drawing
